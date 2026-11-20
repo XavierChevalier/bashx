@@ -9,26 +9,70 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  lint:
+  shellcheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: shellcheck
-        run: shellcheck -x -S warning bin/bashx $(git ls-files '*.sh' '*.bash')
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: shellcheck --version
+      - run: shellcheck -x -S warning bin/bashx $(git ls-files '*.sh' '*.bash')
 
   test:
+    name: test (ubuntu, coverage)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Tests and coverage
-        run: bin/bashx test --coverage=coverage
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: bin/bashx test --coverage=coverage --report=junit
       - name: Coverage summary
-        run: bin/bashx coverage report -x '^examples/' -f markdown coverage/covered.tsv >>"$GITHUB_STEP_SUMMARY"
+        if: always()
+        run: |
+          {
+            bin/bashx coverage report -x '^examples/' -f markdown coverage/covered.tsv
+            echo
+            echo '| Script | Covered | Coverable |'
+            echo '| --- | ---: | ---: |'
+            bin/bashx coverage report -x '^examples/' -f tsv coverage/covered.tsv | tail -n +2 | sort | awk -F'\t' '{ printf "| `%s` | %d | %d |\n", $1, $2, $3 }'
+          } >>"${GITHUB_STEP_SUMMARY}"
 
-  example:
+  # The minimum bash version bashx supports, and the ones after it, on the
+  # official bash images (Alpine: busybox tools plus the packages bashx needs).
+  bash-versions:
+    name: test (bash ${{ matrix.bash }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        bash: ["5.0", "5.1", "5.2"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Tests in bash:${{ matrix.bash }}
+        run: |
+          docker run --rm -v "${PWD}:/src" -w /src "bash:${{ matrix.bash }}" sh -euc '
+            apk add --no-cache coreutils findutils git perl procps >/dev/null
+            git config --global --add safe.directory /src
+            bash --version | head -1
+            CI=1 bash bin/bashx test
+          '
+
+  macos:
+    name: test (macos)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: brew install bash coreutils
+      - name: Tests
+        run: |
+          export PATH="$(brew --prefix coreutils)/libexec/gnubin:$(brew --prefix)/bin:${PATH}"
+          bash --version | head -1
+          bin/bashx test
+
+  mutation:
+    name: mutation (example)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Mutation testing of the example
-        run: bin/bashx mutate examples/calculator/calc.sh >>"$GITHUB_STEP_SUMMARY"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: bin/bashx mutate examples/calculator/calc.sh >>"${GITHUB_STEP_SUMMARY}"

@@ -1,6 +1,8 @@
 # bashx
 
 [![CI](https://github.com/XavierChevalier/bashx/actions/workflows/ci.yml/badge.svg)](https://github.com/XavierChevalier/bashx/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/XavierChevalier/bashx)](https://github.com/XavierChevalier/bashx/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 Tests, coverage and mutation testing for bash, in bash.
 
@@ -129,7 +131,7 @@ in the **[documentation index](docs/README.md)**:
 | [Running tests](docs/running-tests.md) | [How it works](docs/how-it-works.md) |
 | [Coverage](docs/coverage.md) | [Troubleshooting](docs/troubleshooting.md) |
 | [Mutation testing](docs/mutation-testing.md) | [Changelog](CHANGELOG.md) |
-| [CI](docs/ci.md) | |
+| [CI](docs/ci.md) | [Contributing and releases](CONTRIBUTING.md) |
 
 ## Requirements
 

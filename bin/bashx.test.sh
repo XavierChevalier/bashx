@@ -28,6 +28,20 @@ test_should_print_its_lib_dir_through_a_symlink() {
   test::assert_equals "${LIB}" "$("${bin}/relative" lib)" || return 1
 }
 
+# release-please bumps them together; a hand edit of one would ship a wrong
+# `bashx version` or a changelog out of step with the tag.
+test_should_agree_on_the_version_everywhere() {
+  local -r root="$(dirname "${BASHX}")/.."
+  local cli manifest file changelog
+  cli="$("${BASHX}" version)"
+  manifest="$(sed -n 's/^ *"\." *: *"\(.*\)".*$/\1/p' "${root}/.release-please-manifest.json")"
+  file="$(cat "${root}/version.txt")"
+  changelog="$(sed -n 's/^## \[\([0-9][^]]*\)\].*$/\1/p' "${root}/CHANGELOG.md" | head -1)"
+  test::assert_equals "bashx ${manifest}" "${cli}" "bin/bashx vs .release-please-manifest.json" || return 1
+  test::assert_equals "${manifest}" "${file}" "version.txt" || return 1
+  test::assert_equals "${manifest}" "${changelog}" "latest CHANGELOG.md section" || return 1
+}
+
 test_should_refuse_an_unknown_command() {
   local out rc=0
   out="$("${BASHX}" frobnicate 2>&1)" || rc=$?
@@ -52,6 +66,7 @@ test::init
 test::run "should list its commands" test_should_list_its_commands
 test::run "should print its version" test_should_print_its_version
 test::run "should print its lib dir through a symlink" test_should_print_its_lib_dir_through_a_symlink
+test::run "should agree on the version everywhere" test_should_agree_on_the_version_everywhere
 test::run "should refuse an unknown command" test_should_refuse_an_unknown_command
 test::run "should run the tests of a project" test_should_run_the_tests_of_a_project
 test::run "should hand mutate and coverage their arguments" test_should_hand_mutate_and_coverage_their_arguments

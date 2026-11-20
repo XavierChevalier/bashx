@@ -184,10 +184,12 @@ The directory holding `bashx.sh`. Test files source it with
 
 ## bashx version
 
+<!-- x-release-please-start-version -->
 ```console
 $ bashx version
 bashx 0.1.0
 ```
+<!-- x-release-please-end -->
 
 Also `bashx --version` and `bashx -v`.
 

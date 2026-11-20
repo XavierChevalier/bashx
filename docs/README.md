@@ -27,6 +27,8 @@ the tests would notice a bug (mutation testing). Everything is bash.
 | [API](api.md) | every `test::` function, with an example |
 | [How it works](how-it-works.md) | the runner's protocol, isolation, tracing, sandboxes; writing tests without the API |
 | [Troubleshooting](troubleshooting.md) | error messages and their fixes |
+| [Contributing](../CONTRIBUTING.md) | checks, commit messages, how releases are made |
+| [Changelog](../CHANGELOG.md) | what changed in each release |
 
 ## Conventions in this documentation
 

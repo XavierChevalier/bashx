@@ -74,32 +74,43 @@ submodules (see [CI](ci.md)).
 
 ### C. Copy into the project
 
-```bash
-git clone --depth 1 https://github.com/XavierChevalier/bashx.git /tmp/bashx
-mkdir -p vendor/bashx
-cp -R /tmp/bashx/bin /tmp/bashx/lib /tmp/bashx/LICENSE vendor/bashx/
-```
+Every [release](https://github.com/XavierChevalier/bashx/releases) has a
+`bashx-X.Y.Z.tar.gz` with what bashx needs at run time (`bin/`, `lib/`) and
+its `LICENSE`, plus a `.sha256` to check it:
 
-`bin/` and `lib/` are all bashx needs at run time. Keep the `LICENSE` file
-with them.
+<!-- x-release-please-start-version -->
+```bash
+version=0.1.0
+base="https://github.com/XavierChevalier/bashx/releases/download/v${version}"
+curl -fsSLO "${base}/bashx-${version}.tar.gz" -O "${base}/bashx-${version}.tar.gz.sha256"
+sha256sum -c "bashx-${version}.tar.gz.sha256"
+mkdir -p vendor && tar -xzf "bashx-${version}.tar.gz" -C vendor && mv "vendor/bashx-${version}" vendor/bashx
+```
+<!-- x-release-please-end -->
+
+Commit `vendor/bashx`. Keep the `LICENSE` file with it.
 
 ### D. Clone in CI
 
+<!-- x-release-please-start-version -->
 ```bash
 git clone --depth 1 --branch v0.1.0 https://github.com/XavierChevalier/bashx.git /tmp/bashx
 /tmp/bashx/bin/bashx test
 ```
+<!-- x-release-please-end -->
 
 Pin a tag, not `main`, so a new release cannot change your CI by itself.
 
 ## Check that it works
 
+<!-- x-release-please-start-version -->
 ```console
 $ bashx version
 bashx 0.1.0
 $ bashx lib
 /home/me/.bashx/lib
 ```
+<!-- x-release-please-end -->
 
 `bashx lib` prints the directory test files source `bashx.sh` from. Then run
 bashx's own example:
@@ -130,7 +141,7 @@ source "${BASHX_LIB:-$(bashx lib)}/bashx.sh"
 | --- | --- |
 | A | `git -C ~/.bashx pull` |
 | B | `git -C vendor/bashx fetch --tags && git -C vendor/bashx checkout v0.2.0`, then commit `vendor/bashx` |
-| C | copy `bin/` and `lib/` again |
+| C | download the new archive and replace `vendor/bashx` |
 | D | change the tag |
 
 Read the [CHANGELOG](../CHANGELOG.md) before updating.
