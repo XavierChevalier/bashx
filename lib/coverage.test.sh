@@ -62,12 +62,13 @@ test_should_cover_what_xtrace_reports_for_the_sample() {
   write_sample "${dir}/s.sh"
   git -C "${dir}" add s.sh
   mkdir "${dir}/traces"
-  # BASH_ENV unset: under `bashx test --coverage` the tracer would take the trace.
-  (cd "${dir}" && BASH_ENV='' PS4='+${BASH_SOURCE[0]-}:${LINENO}: ' bash -x s.sh >/dev/null 2>"${dir}/traces/1.trace")
+  # Through the real tracer: as root, bash ignores a PS4 from the environment.
+  (cd "${dir}" && BASH_ENV="$(dirname "${COVERAGE_SH}")/coverage-trace.bash" \
+    BASHX_COVERAGE_TRACE_DIR="${dir}/traces" bash s.sh >/dev/null)
   bash "${COVERAGE_SH}" covered -r "${dir}" "${dir}/traces" >"${dir}/covered.tsv"
   # Everything but the two branches not taken (else, *) ran.
   test::assert_equals "covered=10 coverable=12 pct=83.3" "$(bash "${COVERAGE_SH}" report -r "${dir}" "${dir}/covered.tsv")" \
-    "trace: $(head -5 "${dir}/traces/1.trace" | tr '\n' '|') covered: $(tr '\n\t' '| ' <"${dir}/covered.tsv")"
+    "trace: $(cat "${dir}"/traces/*.trace | head -5 | tr '\n' '|') covered: $(tr '\n\t' '| ' <"${dir}/covered.tsv")"
   test::assert_equals "s.sh	10	12" "$(bash "${COVERAGE_SH}" report -r "${dir}" -f tsv "${dir}/covered.tsv" | tail -n +2)"
 }
 
