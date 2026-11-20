@@ -1,9 +1,13 @@
+[Documentation](README.md) › Mutation testing
+
 # Mutation testing
 
 Coverage says a line ran. Mutation testing says a test would notice if it
 were wrong. `bashx mutate` changes one operator of a script at a time (a
 *mutant*: `-gt` → `-ge`, `&&` → `||`, a command deleted…), runs the script's
 tests against it, and counts what they catch.
+
+Every option is in the [command line reference](cli.md#bashx-mutate).
 
 ```bash
 bashx mutate lib/backup.sh                       # one script, its own tests
@@ -129,3 +133,7 @@ run mutation on the scripts that matter, and use `-o` and `-m` to try it out.
 - Line-based: an operator inside a string literal (`echo "a && b"`) is also
   mutated. Such mutants usually survive; mark the line if it matters.
 - Needs a git repository and GNU `timeout`, `shuf`, `realpath`.
+
+---
+
+Previous: [Coverage](coverage.md) · Next: [CI](ci.md)

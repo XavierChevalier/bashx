@@ -1,9 +1,11 @@
+[Documentation](README.md) › Coverage
+
 # Coverage
 
 ```console
 $ bashx test --coverage=coverage
 ...
-🧭 Coverage: covered=678 coverable=748 pct=90.6
+🧭 Coverage: covered=680 coverable=750 pct=90.7
 ```
 
 The run writes `coverage/covered.tsv`: one `path<TAB>line` per line the tests
@@ -16,8 +18,23 @@ lib/runner.sh	214	270
 lib/bashx.sh	121	121
 
 $ bashx coverage report -f markdown coverage/covered.tsv
-**Coverage:** 90.6% of bash lines (678/748)
+**Coverage:** 90.7% of bash lines (680/750)
 ```
+
+## Finding the untested lines
+
+```console
+$ bashx coverage report -f uncovered coverage/covered.tsv
+lib/coverage.sh:103: echo "no trace dir ${traces}" >&2
+lib/coverage.sh:104: return 1
+lib/coverage.sh:178: usage
+...
+```
+
+One line per coverable line no test ran, as `path:line: code`, sorted. Most
+editors and terminals open `path:line` on a click.
+
+All options and formats: [command line reference](cli.md#bashx-coverage-report).
 
 ## What is measured
 
@@ -59,3 +76,7 @@ A covered line ran; nothing says a test checked what it did. Mutation testing
 answers that: see [Mutation testing](mutation-testing.md) and the example in
 the [README](../README.md#a-full-example), where 100 % coverage still leaves a
 mutant alive.
+
+---
+
+Previous: [Running tests](running-tests.md) · Next: [Mutation testing](mutation-testing.md)

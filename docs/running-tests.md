@@ -1,3 +1,5 @@
+[Documentation](README.md) › Running tests
+
 # Running tests
 
 ```bash
@@ -32,6 +34,9 @@ Failed test files:
 ```
 
 ## Options
+
+Every option, with its exact syntax and exit codes, is in the
+[command line reference](cli.md#bashx-test). In short:
 
 | Option | Default | Effect |
 | --- | --- | --- |
@@ -71,3 +76,7 @@ The comment has to come before the first command of the file.
 | 0 | every file passed (skipped ones included) |
 | 1 | a file failed, timed out, or no test file was found |
 | 2 | bad option or root |
+
+---
+
+Previous: [Writing tests](writing-tests.md) · Next: [Coverage](coverage.md)
