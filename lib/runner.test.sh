@@ -291,6 +291,24 @@ test_should_measure_the_coverage_of_scripts_the_tests_run() {
   test::assert_file_not_exists "${tmp}/cov/traces" || return 1
 }
 
+# --filter and -v reach the test files, which act on them (bashx.sh).
+test_should_pass_the_filter_and_verbosity_to_the_files() {
+  local tmp out
+  tmp="$(test::tmp_dir)"
+  write_stub "${tmp}/a.test.sh" '
+source "${BASHX_LIB}/bashx.sh"
+test_should_keep() { echo "said by keep"; }
+test_should_drop() { :; }
+test::main'
+  out="$(run_runner "${tmp}" --filter=keep -v 2>&1)" || return 1
+  test::assert_contains "${out}" "should keep" || return 1
+  test::assert_not_contains "${out}" "should drop" "filtered out" || return 1
+  test::assert_contains "${out}" "said by keep" "verbose" || return 1
+  test::assert_contains "${out}" "1 passed, 0 failed, 1 total" || return 1
+  out="$(run_runner "${tmp}" 2>&1)" || return 1
+  test::assert_not_contains "${out}" "said by keep" "quiet by default" || return 1
+}
+
 test_should_print_its_help() {
   test::assert_contains "$(bash "${RUNNER}" --help)" "Usage: bashx test [options] [<root>]" || return 1
 }
@@ -317,5 +335,6 @@ test::run "should start the longest file first" test_should_start_the_longest_fi
 test::run "should record each file duration" test_should_record_each_file_duration
 test::run "should write markdown json and junit reports" test_should_write_markdown_json_and_junit_reports
 test::run "should measure the coverage of scripts the tests run" test_should_measure_the_coverage_of_scripts_the_tests_run
+test::run "should pass the filter and verbosity to the files" test_should_pass_the_filter_and_verbosity_to_the_files
 test::run "should print its help" test_should_print_its_help
 test::summary
