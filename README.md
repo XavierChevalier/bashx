@@ -1,5 +1,7 @@
 # bashx
 
+[![CI](https://github.com/XavierChevalier/bashx/actions/workflows/ci.yml/badge.svg)](https://github.com/XavierChevalier/bashx/actions/workflows/ci.yml)
+
 Tests, coverage and mutation testing for bash, in bash.
 
 - **Write tests** as plain bash functions, with assertions, mocks and temp dirs.
