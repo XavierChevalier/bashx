@@ -4,6 +4,28 @@ Every release is listed here, newest first. From 0.1.0 on, this file is
 written by the release workflow from the commit messages: see
 [CONTRIBUTING.md](CONTRIBUTING.md#releases).
 
+## [0.2.0](https://github.com/XavierChevalier/bashx/compare/v0.1.1...v0.2.0) (2026-11-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* what a passing case prints is no longer shown (set BASHX_VERBOSE to see it), and a case's stdin is /dev/null.
+
+### Features
+
+* an optional message for assert ([a3748fe](https://github.com/XavierChevalier/bashx/commit/a3748fe88675ca8bad9e8674cbe84664dd054f34))
+* **runner:** --filter and -v ([278e736](https://github.com/XavierChevalier/bashx/commit/278e736b16a3dd57b34c8b1e1f1d1a5ac0bd2182))
+* test_* cases, test::main, assert, capture, mock, tables and hooks ([1f6dffe](https://github.com/XavierChevalier/bashx/commit/1f6dffe4b7692ef199ad25e859c5b4951cb927f9))
+
+
+### Documentation
+
+* **proposals:** capture through $( ), which keeps the status on bash 5.0 ([b0b6cf1](https://github.com/XavierChevalier/bashx/commit/b0b6cf140690584aa2247694b50ea94bd6e23b11))
+* **proposals:** end test files with test::main, not the EXIT trap ([c5c38bb](https://github.com/XavierChevalier/bashx/commit/c5c38bba2aff9a5aadd52811e9862ed4fb8c968e))
+* **proposals:** run capture's command inside an || list for bash 5.0 ([dc6f250](https://github.com/XavierChevalier/bashx/commit/dc6f250ba77cf72c2eafdfa8028c12e68eb4b379))
+* propose a v2 test-writing API, with a working spike ([8117998](https://github.com/XavierChevalier/bashx/commit/8117998186bfd27eefac6af91f8c9bcceedef241))
+* write tests with test_* functions, assert, capture and mock ([310a26b](https://github.com/XavierChevalier/bashx/commit/310a26bf2cbfde933a9ac09432cc660d6b967bb6))
+
 ## [0.1.1](https://github.com/XavierChevalier/bashx/compare/v0.1.0...v0.1.1) (2026-11-20)
 
 
