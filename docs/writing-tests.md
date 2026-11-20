@@ -1,3 +1,5 @@
+[Documentation](README.md) › Writing tests
+
 # Writing tests
 
 ## A test file
@@ -66,7 +68,7 @@ A failed assertion prints what it expected and what it got:
 ```
 
 Every assertion takes an optional last argument: a message printed with the
-failure. The full list is in the [API reference](api.md).
+failure. The full list, with examples, is in the [API reference](api.md).
 
 ## Testing exit codes and errors
 
@@ -175,3 +177,7 @@ fi
 file when a case failed, even if `test::summary` was forgotten. If the code
 under test sets its own EXIT trap, chain the existing one instead of replacing
 it, or call it from yours.
+
+---
+
+Previous: [Getting started](getting-started.md) · Next: [Running tests](running-tests.md)

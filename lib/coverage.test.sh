@@ -127,6 +127,18 @@ test_should_score_the_union_of_several_covered_files_and_skip_tests() {
     "$(bash "${COVERAGE_SH}" report -r "${dir}" -f markdown "${dir}/shard1.tsv" "${dir}/shard2.tsv")"
 }
 
+test_should_list_the_lines_no_test_ran() {
+  local dir
+  dir="$(test::tmp_dir)"
+  mkdir -p "${dir}/lib"
+  printf '%s\n' 'a() {' '  echo a' '}' 'b() {' '    echo b' '  return 1' '}' >"${dir}/lib/x.sh"
+  printf 'echo z\n' >"${dir}/y.sh"
+  printf 'lib/x.sh\t2\n' >"${dir}/covered.tsv"
+  test::assert_equals "lib/x.sh:5: echo b
+lib/x.sh:6: return 1
+y.sh:1: echo z" "$(bash "${COVERAGE_SH}" report -r "${dir}" -f uncovered "${dir}/covered.tsv")"
+}
+
 test_should_refuse_an_unknown_command_or_format() {
   local rc=0
   bash "${COVERAGE_SH}" nope >/dev/null 2>&1 || rc=$?
@@ -144,6 +156,7 @@ function main() {
   test::run "should resolve relative paths against the process directory" test_should_resolve_relative_paths_against_the_process_directory
   test::run "should leave out scripts matching an exclusion" test_should_leave_out_scripts_matching_an_exclusion
   test::run "should score the union of several covered files and skip tests" test_should_score_the_union_of_several_covered_files_and_skip_tests
+  test::run "should list the lines no test ran" test_should_list_the_lines_no_test_ran
   test::run "should refuse an unknown command or format" test_should_refuse_an_unknown_command_or_format
   test::summary
 }

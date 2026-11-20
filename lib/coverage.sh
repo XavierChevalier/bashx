@@ -15,14 +15,15 @@ set -o errexit -o pipefail -o nounset
 
 function usage() {
   cat <<USAGE
-Usage: bashx coverage report [-r <root>] [-x <regex>] [-f summary|markdown|tsv] <covered.tsv>...
+Usage: bashx coverage report [-r <root>] [-x <regex>] [-f summary|markdown|tsv|uncovered] <covered.tsv>...
        bashx coverage covered [-r <root>] <trace dir>
 
   report   score the union of covered.tsv files (from bashx test --coverage)
            against the project's scripts
-           summary:  covered=<n> coverable=<n> pct=<n.n>  (default)
-           markdown: one line for a PR comment
-           tsv:      path, covered, coverable per script
+           summary:   covered=<n> coverable=<n> pct=<n.n>  (default)
+           markdown:  one line for a PR comment
+           tsv:       path, covered, coverable per script
+           uncovered: "<path>:<line>: <code>" for every line no test ran
   covered  print "<path>\t<line>" for every project line the traces ran
   -r       project root (default: git root of the current directory, or it)
   -x       also leave out scripts whose path matches this extended regex
@@ -143,14 +144,24 @@ function coverage::report() {
     [[ -f "${root}/${script}" ]] || continue
     coverage::lines "${root}/${script}" | awk -v s="${script}" '{ print s "\t" $0 }'
   done < <(coverage::scripts "${root}" "${exclude}") >"${table}"
-  awk -F'\t' -v table="${table}" -v format="${format}" '
+  awk -F'\t' -v table="${table}" -v format="${format}" -v root="${root}" '
     FILENAME != table { ran[$1 "\t" $2] = 1; next }
     ran[$1 "\t" $2] { hit[$1 "\t" $3] = 1 }
     $4 == 1 { line[$1 "\t" $2] = $1; coverable[$1]++ }
     END {
       for (k in line) { total++; if (hit[k]) { covered[line[k]]++; done++ } }
       pct = total ? 100 * done / total : 0
-      if (format == "tsv") {
+      if (format == "uncovered") {
+        for (k in line) if (!hit[k]) { split(k, p, "\t"); missing[p[1]] = missing[p[1]] " " p[2] " " }
+        for (s in missing) {
+          n = 0
+          while ((getline text < (root "/" s)) > 0) {
+            n++
+            if (index(missing[s], " " n " ")) { sub(/^[ \t]+/, "", text); print s ":" n ": " text }
+          }
+          close(root "/" s)
+        }
+      } else if (format == "tsv") {
         print "path\tcovered\tcoverable"
         for (s in coverable) print s "\t" (covered[s] + 0) "\t" coverable[s]
       } else if (format == "markdown") {
@@ -202,13 +213,17 @@ function main() {
         return 1
       }
       case "${format}" in
-        summary | markdown | tsv) ;;
+        summary | markdown | tsv | uncovered) ;;
         *)
           echo "unknown format ${format}" >&2
           return 1
           ;;
       esac
-      coverage::report "${root}" "${format}" "${exclude}" "$@"
+      if [[ "${format}" == uncovered ]]; then
+        coverage::report "${root}" "${format}" "${exclude}" "$@" | LC_ALL=C sort -t: -k1,1 -k2,2n
+      else
+        coverage::report "${root}" "${format}" "${exclude}" "$@"
+      fi
       ;;
     -h | --help) usage ;;
     *)

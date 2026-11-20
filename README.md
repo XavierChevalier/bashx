@@ -8,13 +8,14 @@ Tests, coverage and mutation testing for bash, in bash.
   Every case runs isolated: errexit on, its own subshell, its own tmp dir.
 - **Run them** in parallel with `bashx test`: per-file deadlines, no leaked
   processes, CI shards, Markdown / JSON / JUnit reports.
-- **Measure line coverage** with `bashx test --coverage=DIR`.
+- **Measure line coverage** with `bashx test --coverage=DIR`, and list the
+  lines no test runs.
 - **Check the tests themselves** with `bashx mutate`: it changes one operator
   of your script at a time (`-gt` → `-ge`, `&&` → `||`, a command deleted…)
   and tells you which changes no test notices.
 
 No dependency beyond bash ≥ 5 and the usual coreutils. bashx tests itself:
-82 cases, 90 % line coverage.
+83 cases, 90 % line coverage.
 
 ## Install
 
@@ -30,6 +31,9 @@ Or vendor it in your project, so CI needs nothing else:
 git submodule add https://github.com/XavierChevalier/bashx.git vendor/bashx
 vendor/bashx/bin/bashx test
 ```
+
+Requirements, macOS, updating and the other ways to install:
+[Installation](docs/installation.md).
 
 ## Quick start
 
@@ -114,14 +118,18 @@ gap left open, to try it.
 
 ## Documentation
 
-| Topic | |
+Start with **[Getting started](docs/getting-started.md)**: a first project, from
+an empty directory to 100 % coverage and mutation score. Everything else is
+in the **[documentation index](docs/README.md)**:
+
+| Guides | Reference |
 | --- | --- |
-| [Writing tests](docs/writing-tests.md) | anatomy of a test file, isolation, fixtures, mocks, bash pitfalls |
-| [API reference](docs/api.md) | every `test::` function |
-| [Running tests](docs/running-tests.md) | `bashx test` options, kinds, timeouts, shards, reports |
-| [Coverage](docs/coverage.md) | how lines are counted, reports, exclusions |
-| [Mutation testing](docs/mutation-testing.md) | operators, reading survivors, `# no-mutate`, pairs |
-| [CI](docs/ci.md) | GitHub Actions, shards, coverage and mutation in a pipeline |
+| [Installation](docs/installation.md) | [Command line](docs/cli.md): every command, option, variable, exit code |
+| [Writing tests](docs/writing-tests.md) | [API](docs/api.md): every `test::` function |
+| [Running tests](docs/running-tests.md) | [How it works](docs/how-it-works.md) |
+| [Coverage](docs/coverage.md) | [Troubleshooting](docs/troubleshooting.md) |
+| [Mutation testing](docs/mutation-testing.md) | [Changelog](CHANGELOG.md) |
+| [CI](docs/ci.md) | |
 
 ## Requirements
 

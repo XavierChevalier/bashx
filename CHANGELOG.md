@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- `bashx coverage report -f uncovered`: `path:line: code` for every line no
+  test ran.
+- Documentation: installation, getting started, command line reference,
+  API with examples, how it works, troubleshooting.
+
 ## 0.1.0
 
 First release.

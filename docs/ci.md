@@ -1,3 +1,5 @@
+[Documentation](README.md) › CI
+
 # CI
 
 ## GitHub Actions
@@ -81,3 +83,7 @@ matter, on a schedule or on the scripts a PR changes, and gate on a score:
 
 The report is Markdown, so it renders as is in the job summary or a PR
 comment.
+
+---
+
+Previous: [Mutation testing](mutation-testing.md) · Next: [Command line](cli.md)
