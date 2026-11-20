@@ -19,7 +19,7 @@ Tests, coverage and mutation testing for bash, in bash.
   and tells you which changes no test notices.
 
 No dependency beyond bash ≥ 5 and the usual coreutils. bashx tests itself:
-102 cases, 91 % line coverage.
+103 cases, 91 % line coverage.
 
 ## Install
 
