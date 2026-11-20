@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck
+        run: shellcheck -x -S warning bin/bashx $(git ls-files '*.sh' '*.bash')
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tests and coverage
+        run: bin/bashx test --coverage=coverage
+      - name: Coverage summary
+        run: bin/bashx coverage report -x '^examples/' -f markdown coverage/covered.tsv >>"$GITHUB_STEP_SUMMARY"
+
+  example:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Mutation testing of the example
+        run: bin/bashx mutate examples/calculator/calc.sh >>"$GITHUB_STEP_SUMMARY"
