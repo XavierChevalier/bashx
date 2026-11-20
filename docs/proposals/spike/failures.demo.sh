@@ -38,3 +38,4 @@ B
   assert "$(git rev-parse HEAD)" == abc123
 }
 test_skip_works() { test::skip "no docker"; }
+test::main

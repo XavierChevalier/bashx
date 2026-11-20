@@ -59,10 +59,13 @@ test::cases test_should_tell_the_sign_of_a_number <<'EOF'
 0   zero
 9   positive
 EOF
+
+test::main
 ```
 
-Plus de `test::init`, de `test::run`, de `test::summary` ; stdout et stderr
-séparés ; un cas par ligne de table ; et quand ça casse :
+Une seule ligne de cérémonie (`test::main`) au lieu d'un `test::run` par
+cas ; stdout et stderr séparés ; un cas par ligne de table ; et quand ça
+casse :
 
 ```text
 │  ✗ should add two integers (9ms)
@@ -114,19 +117,31 @@ source ./backup.sh
 test_should_keep_the_last_three_archives() {
   ...
 }
+
+test::main
 ```
 
-**Comment.** Le trap EXIT que `bashx.sh` pose déjà lance, à la fin du
-fichier, chaque `test_*` qui n'a pas déjà été lancé, puis le résumé. Il ne le
-fait que si le fichier s'est terminé normalement (status 0) : une erreur au
-`source` n'exécute pas de tests à moitié chargés.
+**Comment.** `test::main`, en dernière ligne, lance chaque `test_*` qui n'a
+pas déjà été lancé, puis le résumé. `test::init` devient implicite (appelé
+par le premier cas).
 
-**Compatibilité.** `test::init` devient implicite (appelé par le premier
-`test::run`), `test::run` explicite reste possible pour donner une
-description libre, et une fonction déjà lancée explicitement n'est pas
-relancée. Les fichiers v1 tournent sans changement.
+**Pourquoi pas de lancement implicite par le trap EXIT.** C'était la
+première version du prototype : zéro ligne de cérémonie. La CI l'a fait
+tomber sous bash 5.0. Sous un trap, bash 5.0 fait renvoyer à un `return`
+sans argument, dans une fonction appelée, le statut d'avant le trap (ici 0).
+Résultat : `calc::_require_integers "$@" || return` laissait passer
+`calc::add 1 x` avec le code 0, et le test échouait sous 5.0 seulement.
+Lancer le code testé depuis un trap change sa sémantique : ce n'est pas
+acceptable pour un outil de test. Le trap garde un rôle de filet : si des
+`test_*` existent mais que `test::main` n'a jamais tourné, le fichier échoue
+avec `✗ 5 test_* function(s) never ran: end the file with test::main`. Un cas
+écrit et jamais lancé ne passe donc plus inaperçu.
 
-**Alternative écartée :** une syntaxe `@test "description" { … }` à la bats.
+**Compatibilité.** `test::run` explicite reste possible pour donner une
+description libre ; une fonction déjà lancée par `test::run` n'est pas
+relancée par `test::main`. Les fichiers v1 tournent sans changement.
+
+**Autre alternative écartée :** une syntaxe `@test "description" { … }` à la bats.
 Elle exige de prétraiter le fichier : `bash fichier.test.sh` ne marche plus,
 et les numéros de ligne de la couverture et des mutants ne correspondent plus
 au fichier.
@@ -206,14 +221,6 @@ assert "${STDOUT}" empty
 `capture` lance la commande dans un sous-shell, stdin fermé, et remplit
 `STATUS`, `STDOUT`, `STDERR` (fins de ligne retirées comme avec `$( )`). Le
 `|| STATUS=$?` est fait à l'intérieur : impossible de l'oublier.
-
-- **Piège bash 5.0, vu dans la CI du prototype** : une fonction qui se
-  termine par un `cmd || return` raté, lancée seule dans `( )` ou `$( )`,
-  donne le code 0 au lieu de 2 (`calc::add 1 x`). Appelée dans une liste
-  `||`, comme le fait `test::assert_exit_code`, elle donne 2. `capture` fait
-  donc `( "$@" … || exit "$?" ) || STATUS=$?`. C'est aussi un argument pour
-  `capture` : chaque test qui écrit `out="$(f)" || rc=$?` à la main est
-  exposé à ce piège.
 
 - **Majuscules, exprès** : shellcheck (lancé en CI sur tous les `.sh`) signale
   `status` en minuscules comme « jamais assigné » (SC2154) ; il ne le fait pas
@@ -366,7 +373,7 @@ Une PR par ligne, chacune avec ses tests et sa doc (`api.md`,
 
 1. Localisation + diff des échecs (4), assertion qui termine le cas (3).
 2. `assert` (2) ; alias v1 conservés.
-3. Découverte + init/summary implicites (1).
+3. Découverte + `test::main` + filet du trap EXIT (1).
 4. `capture` (5).
 5. `mock` (6) en remplacement documenté de `mock_command`.
 6. Hooks (8), tables (7).
@@ -382,16 +389,12 @@ Une PR par ligne, chacune avec ses tests et sa doc (`api.md`,
 2. **Variables de `capture`** en majuscules (`STATUS`) pour shellcheck, ou en
    minuscules comme bats (`status`) avec un `# shellcheck disable` à
    documenter ?
-3. **Lancement implicite par le trap EXIT** : pratique mais « magique ».
-   Alternative explicite : une dernière ligne `test::main`. Je recommande
-   l'implicite, `test::main` restant disponible pour qui le préfère.
-4. **Sortie silencieuse par défaut** (9) : changement de comportement ; OK
+3. **Sortie silencieuse par défaut** (9) : changement de comportement ; OK
    pour 0.2.0 ?
 
 ## Limites du prototype
 
 Le prototype n'est pas le code à livrer : il redéfinit `test::run` et le trap
 EXIT par-dessus la v1 au lieu de les modifier, n'a pas ses propres tests et
-n'a été essayé qu'avec la version de bash de ce conteneur (pas 5.0/5.1 ni
-macOS, que la CI couvre). Il passe shellcheck `-S warning` et tourne sous
-`bashx test` (son `calc.test.sh` est découvert et passe).
+tourne dans la CI du dépôt (bash 5.0, 5.1, 5.2, macOS). Il passe shellcheck
+`-S warning` et son `calc.test.sh` est découvert et lancé par `bashx test`.

@@ -34,3 +34,4 @@ test_should_refuse_what_is_not_an_integer() {
   assert "${STATUS}" == 2
   assert "${STDERR}" == "calc: not an integer: 'x'"
 }
+test::main

@@ -4,7 +4,7 @@
 #
 #   source "$(dirname "${BASH_SOURCE[0]}")/next.sh"
 #   test_should_add() { assert "$(calc::add 2 3)" == 5; }
-#   # nothing else: the cases are found and run when the file ends.
+#   test::main   # last line: runs every test_* function, then the summary
 
 # shellcheck source=../../../lib/bashx.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../lib" && pwd)/bashx.sh"
@@ -90,8 +90,10 @@ test::_describe() {
   echo "${d//_/ }"
 }
 
-# Runs every test_* function, then the summary. Called by the EXIT trap when
-# the file never called test::run itself.
+# Runs every test_* function not run yet, then the summary. The last line of
+# the file. Not run from the EXIT trap: on bash 5.0, a `return` without
+# argument anywhere under a trap returns the status from before the trap (0),
+# so `check || return` in the code under test would pass.
 test::main() {
   local _line fn row
   local -a args
@@ -130,11 +132,8 @@ test::cases() {
 # shellcheck disable=SC2034 # read by the test file
 capture() {
   local -r dir="$(mktemp -d "${_TEST_TMP:-${TMPDIR:-/tmp}}/capture.XXXXXX")"
-  # bash 5.0 (CI) reads 0 for a function ending in a failed `cmd || return`
-  # when it is the whole of a ( ) or $( ). Inside an || list, as in v1's
-  # assert_exit_code, it gets the right code: hand it on with an explicit exit.
   STATUS=0
-  ( "$@" >"${dir}/out" 2>"${dir}/err" </dev/null || exit "$?" ) || STATUS=$?
+  ( "$@" ) >"${dir}/out" 2>"${dir}/err" </dev/null || STATUS=$?
   STDOUT="$(<"${dir}/out")"
   STDERR="$(<"${dir}/err")"
 }
@@ -248,11 +247,20 @@ mock::count() { wc -l <"${_TEST_TMP}/.mocks/$1/calls" | tr -d ' '; }
 
 # ── Exit ─────────────────────────────────────────────────────────────────────
 
+# A file that defines test_* cases but never calls test::main would pass
+# without running them: fail it, and say why.
 test::_next_on_exit() {
   local status=$?
   [[ "${BASHPID}" == "$$" ]] || exit "${status}"
   if ((status == 0 && _TEST_SUMMARY_DONE == 0)); then
-    test::main || status=1
+    local _line fn missing=0
+    while read -r _line fn; do
+      [[ -n "${_TEST_RAN[${fn}]:-}" ]] || missing=$((missing + 1))
+    done < <(test::_discover)
+    if ((missing > 0)); then
+      echo "✗ ${missing} test_* function(s) never ran: end the file with test::main" >&2
+      status=1
+    fi
   fi
   (exit "${status}")
   test::_on_exit
