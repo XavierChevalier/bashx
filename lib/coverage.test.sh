@@ -66,7 +66,8 @@ test_should_cover_what_xtrace_reports_for_the_sample() {
   (cd "${dir}" && BASH_ENV='' PS4='+${BASH_SOURCE[0]-}:${LINENO}: ' bash -x s.sh >/dev/null 2>"${dir}/traces/1.trace")
   bash "${COVERAGE_SH}" covered -r "${dir}" "${dir}/traces" >"${dir}/covered.tsv"
   # Everything but the two branches not taken (else, *) ran.
-  test::assert_equals "covered=10 coverable=12 pct=83.3" "$(bash "${COVERAGE_SH}" report -r "${dir}" "${dir}/covered.tsv")"
+  test::assert_equals "covered=10 coverable=12 pct=83.3" "$(bash "${COVERAGE_SH}" report -r "${dir}" "${dir}/covered.tsv")" \
+    "trace: $(head -5 "${dir}/traces/1.trace" | tr '\n' '|') covered: $(tr '\n\t' '| ' <"${dir}/covered.tsv")"
   test::assert_equals "s.sh	10	12" "$(bash "${COVERAGE_SH}" report -r "${dir}" -f tsv "${dir}/covered.tsv" | tail -n +2)"
 }
 
@@ -91,6 +92,8 @@ c.sh	1" "$(coverage::covered "${dir}" "${dir}/traces")"
 test_should_resolve_relative_paths_against_the_process_directory() {
   local dir
   dir="$(test::tmp_dir)"
+  # A root spelled with "//" (macOS TMPDIR ends in "/") still matches.
+  dir="${dir%/*}//${dir##*/}"
   mkdir "${dir}/traces"
   printf '%s\n' "#cwd ${dir}/sub" "+./x.sh:2: a" "+../y.sh:5: b" "+${dir}/z.sh:1: c" >"${dir}/traces/1.trace"
   printf '%s\n' "#cwd /elsewhere" "+./w.sh:1: d" >"${dir}/traces/2.trace"

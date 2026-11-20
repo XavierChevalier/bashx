@@ -351,7 +351,7 @@ test_should_copy_tracked_and_untracked_files_into_a_sandbox() {
   git -C "${dir}/repo" add tracked.sh .gitignore
   mutation::sandbox "${dir}/repo" "${dir}/box"
   test::assert_equals ".gitignore tracked.sh untracked.sh" "$(git -C "${dir}/box" ls-files | paste -sd' ')" || return 1
-  test::assert_equals "${dir}/box" "$(git -C "${dir}/box" rev-parse --show-toplevel)" || return 1
+  test::assert_equals "$(cd "${dir}/box" && pwd -P)" "$(git -C "${dir}/box" rev-parse --show-toplevel)" || return 1
   test::assert_equals 1 "$(git -C "${dir}/box" rev-list --count HEAD)" || return 1
 }
 

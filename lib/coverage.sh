@@ -113,7 +113,21 @@ function coverage::covered() {
   # Relative paths are resolved against the directory each process started in
   # (its "#cwd" line), or against the root without one.
   find "${traces}" -type f -name '*.trace' -print0 |
-    xargs -0 -r awk -v root="${root%/}/" '
+    xargs -0 -r awk -v root="${root}" '
+      # The root as the paths below are normalised: no "//", "." or "..".
+      BEGIN {
+        nparts = split(root, parts, "/")
+        depth = 0
+        for (i = 1; i <= nparts; i++) {
+          if (parts[i] == "" || parts[i] == ".") continue
+          if (parts[i] == "..") { if (depth > 0) depth--; continue }
+          depth++
+          kept[depth] = parts[i]
+        }
+        root = ""
+        for (i = 1; i <= depth; i++) root = root "/" kept[i]
+        root = root "/"
+      }
       FNR == 1 { cwd = "" }
       FNR == 1 && /^#cwd / { cwd = substr($0, 6); next }
       match($0, /^\++[^:]+:[0-9]+: /) {
