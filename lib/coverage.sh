@@ -119,22 +119,26 @@ function coverage::covered() {
       match($0, /^\++[^:]+:[0-9]+: /) {
         loc = substr($0, 1, RLENGTH - 2); sub(/^\++/, "", loc)
         n = split(loc, p, ":"); line = p[n]; path = substr(loc, 1, length(loc) - length(line) - 1)
-        if (path !~ /^\//) path = normalize((cwd != "" ? cwd : root) "/" path)
-        if (index(path, root) == 1) path = substr(path, length(root) + 1)
-        else next
-        if (!seen[path "\t" line]++) print path "\t" line
-      }
-      # /a/./b/../c -> /a/c
-      function normalize(path,   n, parts, out, i, k) {
-        n = split(path, parts, "/"); k = 0
-        for (i = 1; i <= n; i++) {
+        if (substr(path, 1, 1) != "/") {
+          base = cwd
+          if (base == "") base = root
+          path = base "/" path
+        }
+        # /a/./b/../c -> /a/c
+        nparts = split(path, parts, "/")
+        depth = 0
+        for (i = 1; i <= nparts; i++) {
           if (parts[i] == "" || parts[i] == ".") continue
-          if (parts[i] == "..") { if (k > 0) k--; continue }
-          out[++k] = parts[i]
+          if (parts[i] == "..") { if (depth > 0) depth--; continue }
+          depth++
+          kept[depth] = parts[i]
         }
         path = ""
-        for (i = 1; i <= k; i++) path = path "/" out[i]
-        return path
+        for (i = 1; i <= depth; i++) path = path "/" kept[i]
+        if (index(path, root) != 1) next
+        path = substr(path, length(root) + 1)
+        key = path "\t" line
+        if (!(key in seen)) { seen[key] = 1; print key }
       }'
 }
 

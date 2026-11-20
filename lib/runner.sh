@@ -45,8 +45,8 @@ runner::discover() {
   find "${root}" \
     \( -name .git -o -name node_modules -o -name .venv -o -name venv -o -name .cache -o -name .bashx \) -prune -o \
     -type f -name "${pattern}" -print \
-    | awk -v nested="$(find "${root}" -mindepth 2 -name .git 2>/dev/null | sed 's|\.git$||')" '
-      BEGIN { n = split(nested, dirs, "\n") }
+    | BASHX_NESTED="$(find "${root}" -mindepth 2 -name .git 2>/dev/null | sed 's|\.git$||')" awk '
+      BEGIN { n = split(ENVIRON["BASHX_NESTED"], dirs, "\n") }
       { for (i = 1; i <= n; i++) if (dirs[i] != "" && index($0, dirs[i]) == 1) next; print }' \
     | LC_ALL=C sort
 }

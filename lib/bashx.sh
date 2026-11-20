@@ -244,9 +244,11 @@ test::_fail() {
 
 # The test file's path, relative to the git root (or the cwd) when inside it.
 test::_file_name() {
-  local file="${BASH_SOURCE[-1]}" root
-  [[ "${file}" == /* ]] || file="${PWD}/${file}"
-  root="$(git -C "$(dirname "${file}")" rev-parse --show-toplevel 2>/dev/null || echo "${PWD}")"
+  local file="${BASH_SOURCE[-1]}" dir root
+  # Physical paths: git prints them (macOS: /var is /private/var).
+  dir="$(cd "$(dirname "${file}")" && pwd -P)"
+  file="${dir}/$(basename "${file}")"
+  root="$(git -C "${dir}" rev-parse --show-toplevel 2>/dev/null || pwd -P)"
   file="${file#"${root}"/}"
   echo "./${file#./}"
 }
