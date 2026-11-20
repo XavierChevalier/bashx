@@ -139,6 +139,18 @@ lib/x.sh:6: return 1
 y.sh:1: echo z" "$(bash "${COVERAGE_SH}" report -r "${dir}" -f uncovered "${dir}/covered.tsv")"
 }
 
+# A project vendoring bashx scores its own scripts, not bashx's.
+test_should_leave_a_vendored_bashx_out() {
+  local dir
+  dir="$(test::tmp_dir)"
+  mkdir -p "${dir}/vendor/bashx"
+  cp -R "$(dirname "${COVERAGE_SH}")" "${dir}/vendor/bashx/lib"
+  printf 'echo a\n' >"${dir}/app.sh"
+  printf 'app.sh\t1\n' >"${dir}/covered.tsv"
+  test::assert_equals "covered=1 coverable=1 pct=100.0" \
+    "$(bash "${dir}/vendor/bashx/lib/coverage.sh" report -r "${dir}" "${dir}/covered.tsv")" || return 1
+}
+
 test_should_refuse_an_unknown_command_or_format() {
   local rc=0
   bash "${COVERAGE_SH}" nope >/dev/null 2>&1 || rc=$?
@@ -157,6 +169,7 @@ function main() {
   test::run "should leave out scripts matching an exclusion" test_should_leave_out_scripts_matching_an_exclusion
   test::run "should score the union of several covered files and skip tests" test_should_score_the_union_of_several_covered_files_and_skip_tests
   test::run "should list the lines no test ran" test_should_list_the_lines_no_test_ran
+  test::run "should leave a vendored bashx out" test_should_leave_a_vendored_bashx_out
   test::run "should refuse an unknown command or format" test_should_refuse_an_unknown_command_or_format
   test::summary
 }

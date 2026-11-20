@@ -13,6 +13,8 @@
 # See docs/coverage.md.
 set -o errexit -o pipefail -o nounset
 
+COVERAGE_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 function usage() {
   cat <<USAGE
 Usage: bashx coverage report [-r <root>] [-x <regex>] [-f summary|markdown|tsv|uncovered] <covered.tsv>...
@@ -32,15 +34,20 @@ USAGE
 }
 
 # Scripts the score is about: *.sh files git knows or would track (every
-# *.sh outside git),
-# minus tests, fixtures/ and paths matching <exclude>.
+# *.sh outside git), minus tests, fixtures/, paths matching <exclude>, and
+# bashx itself when the project vendors it (vendor/bashx/lib/...).
 # Usage: coverage::scripts <root> [<exclude regex>]
 function coverage::scripts() {
   local -r root="$1" exclude="${2:-}"
+  local own="" bashx_root
+  bashx_root="$(cd "${COVERAGE_LIB}/.." && pwd)"
+  [[ "${bashx_root}" == "${root}" || "${bashx_root}" != "${root}/"* ]] || own="${bashx_root#"${root}/"}/"
   {
     git -C "${root}" ls-files -co --exclude-standard -- '*.sh' 2>/dev/null \
       || (cd "${root}" && find . -name '*.sh' -not -path '*/.git/*' | sed 's|^\./||')
-  } | grep -vE '\.test\.sh$|(^|/)fixtures/' | { [[ -z "${exclude}" ]] && cat || grep -vE "${exclude}"; } || true
+  } | grep -vE '\.test\.sh$|(^|/)fixtures/' \
+    | awk -v own="${own}" 'own == "" || index($0, own) != 1' \
+    | { [[ -z "${exclude}" ]] && cat || grep -vE "${exclude}"; } || true
 }
 
 # For every line of a script: "<line>\t<statement start>\t<coverable 0|1>".
