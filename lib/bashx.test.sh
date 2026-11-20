@@ -48,8 +48,8 @@ test_should_fail_a_case_at_its_first_failure() {
   local tmp
   tmp="$(test::tmp_dir)"
   write_suite "${tmp}/mid.test.sh" '
-bad_assert() { test::assert_equals 1 2; echo "kept going after an assertion"; }
-bad_command() { false; echo "kept going after a command"; }
+bad_assert() { test::assert_equals 1 2; echo "kept"" going after an assertion"; }
+bad_command() { false; echo "kept"" going after a command"; }
 test::init
 test::run "bad assert" bad_assert
 test::run "bad command" bad_command
@@ -224,19 +224,291 @@ test_should_honour_no_color() {
   test::assert_contains "$(env -u NO_COLOR bash "${tmp}/c.test.sh")" $'\033[0;32m✓' || return 1
 }
 
-test::init
-test::run "should isolate variables functions and path per case" test_should_isolate_variables_functions_and_path_per_case
-test::run "should fail a case at its first failure" test_should_fail_a_case_at_its_first_failure
-test::run "should fail the file when the summary is forgotten" test_should_fail_the_file_when_the_summary_is_forgotten
-test::run "should fail the file once through a chained exit trap" test_should_fail_the_file_once_through_a_chained_exit_trap
-test::run "should print what each failed assertion expected" test_should_print_what_each_failed_assertion_expected
-test::run "should pass the assertions that hold" test_should_pass_the_assertions_that_hold
-test::run "should fail file assertions on a missing file" test_should_fail_file_assertions_on_a_missing_file
-test::run "should skip a case with its reason" test_should_skip_a_case_with_its_reason
-test::run "should replace a command with a mock" test_should_replace_a_command_with_a_mock
-test::run "should give each case its own tmp dir and clean it" test_should_give_each_case_its_own_tmp_dir_and_clean_it
-test::run "should refuse a suite tmp dir before init" test_should_refuse_a_suite_tmp_dir_before_init
-test::run "should write the counts for the runner" test_should_write_the_counts_for_the_runner
-test::run "should name the file relative to its git root" test_should_name_the_file_relative_to_its_git_root
-test::run "should honour no color" test_should_honour_no_color
-test::summary
+# ── test::main, test::cases ─────────────────────────────────────────────────
+
+test_should_run_the_test_functions_in_file_order() {
+  local tmp
+  tmp="$(test::tmp_dir)"
+  write_suite "${tmp}/main.test.sh" '
+test_should_come_first() { :; }
+helper() { :; }
+test_a_later_one() { :; }
+test::main'
+  run_suite "${tmp}/main.test.sh"
+  test::assert_equals 0 "${RC}" "${OUT}" || return 1
+  test::assert_matches "${OUT}" "✓ should come first.*✓ a later one" || return 1
+  test::assert_not_contains "${OUT}" "helper" || return 1
+  test::assert_contains "${OUT}" "All 2 tests passed" || return 1
+}
+
+test_should_not_run_twice_a_case_already_run() {
+  local tmp
+  tmp="$(test::tmp_dir)"
+  write_suite "${tmp}/twice.test.sh" '
+test_once() { echo ran >>"$1"; }
+test::run "explicit" test_once "'"${tmp}"'/log"
+test::main'
+  run_suite "${tmp}/twice.test.sh"
+  test::assert_equals 0 "${RC}" "${OUT}" || return 1
+  test::assert_equals 1 "$(wc -l <"${tmp}/log")" || return 1
+}
+
+test_should_fail_a_file_whose_cases_never_ran() {
+  local tmp
+  tmp="$(test::tmp_dir)"
+  write_suite "${tmp}/nomain.test.sh" '
+test_one() { :; }
+test_two() { :; }'
+  run_suite "${tmp}/nomain.test.sh"
+  test::assert_equals 1 "${RC}" || return 1
+  test::assert_contains "${OUT}" "2 test_* function(s) never ran: end the file with test::main" || return 1
+}
+
+test_should_run_a_case_once_per_row_of_its_table() {
+  local tmp
+  tmp="$(test::tmp_dir)"
+  write_suite "${tmp}/table.test.sh" '
+test_should_join() { [[ "$1+$2" == "$3" ]]; }
+test::cases test_should_join <<'"'EOF'"'
+a          b     a+b
+# a comment
+  "x y"    z     "x y+z"
+
+""         ""    +
+EOF
+test::main'
+  run_suite "${tmp}/table.test.sh"
+  test::assert_equals 0 "${RC}" "${OUT}" || return 1
+  test::assert_contains "${OUT}" "✓ should join [a b a+b]" || return 1
+  test::assert_contains "${OUT}" "✓ should join [x y z x y+z]" || return 1
+  test::assert_contains "${OUT}" "All 3 tests passed" || return 1
+}
+
+# ── assert ───────────────────────────────────────────────────────────────────
+
+test_should_pass_the_asserts_that_hold() {
+  local dir
+  dir="$(test::tmp_dir)"
+  printf 'port=80\n' >"${dir}/conf"
+  printf 'port=80\n' >"${dir}/golden"
+  assert a == a
+  assert a != b
+  assert "hello world" contains "lo w"
+  assert "hello" !contains x
+  assert v1.2.3 matches '^v[0-9]+\.[0-9]+\.[0-9]+$'
+  assert "Usage: x" starts_with "Usage:"
+  assert "file.sh" ends_with ".sh"
+  assert "" empty
+  assert x !empty
+  assert 3 -eq 3
+  assert 3 -ne 4
+  assert -1 -lt 0
+  assert 3 -le 3
+  assert 10 -gt 9
+  assert 3 -ge 3
+  assert "${dir}/conf" is_file
+  assert "${dir}" is_dir
+  assert "${dir}" exists
+  assert "${dir}/nope" !exists
+  assert "${dir}/conf" has "port=80"
+  assert "${dir}/conf" !has "port=8080"
+  assert "${dir}/conf" same_as "port=80"
+  assert "${dir}/conf" same_as "${dir}/golden"
+  test::assert a == a
+}
+
+# The failure output of one assert, with the case's failure flag off so that
+# it does not fail this case.
+assert_output() {
+  _TEST_FAIL_FLAG="" _TEST_RED="" _TEST_RESET="" assert "$@" 2>&1
+}
+
+test_should_print_what_each_failed_assert_expected() {
+  local dir row out
+  dir="$(test::tmp_dir)"
+  printf 'port=80\n' >"${dir}/conf"
+  # shellcheck disable=SC2089,SC2090 # rows are split into words on purpose
+  for row in \
+    "a == b|expected: b" \
+    "a != a|!=: a" \
+    "abc contains x|contains: x" \
+    "abc !contains b|!contains: b" \
+    "abc matches ^b|matches: ^b" \
+    "abc starts_with b|starts_with: b" \
+    "abc ends_with b|ends_with: b" \
+    "x empty|empty, but got: x" \
+    "3 -gt 4|-gt: 4" \
+    "x -gt 4|-gt compares integers" \
+    "/nope is_file|is_file, but got: /nope" \
+    "/ !exists|!exists, but got: /" \
+    "${dir}/conf has 8080|has: 8080" \
+    "/nope has x|no file at: /nope" \
+    "a bogus b|unknown operator 'bogus'"; do
+    # shellcheck disable=SC2086 # the row holds the arguments
+    out="$(assert_output ${row%%|*})" || true
+    test::assert_contains "${out}" "${row#*|}" || return 1
+    test::assert_contains "${out}" "✗ bashx.test.sh:" "the line of the assert" || return 1
+  done
+}
+
+test_should_show_a_diff_for_multiline_values() {
+  local out
+  out="$(assert_output $'a\nb\nc' == $'a\nB\nc')" || true
+  test::assert_contains "${out}" "diff (- expected, + actual):" || return 1
+  test::assert_contains "${out}" $'-B\n  +b' || return 1
+}
+
+test_should_name_the_helper_and_the_case_of_a_failed_assert() {
+  local tmp
+  tmp="$(test::tmp_dir)"
+  write_suite "${tmp}/where.test.sh" '
+check_even() { assert $(($1 % 2)) == 0; }
+test_should_be_even() {
+  check_even 3
+}
+test::main'
+  run_suite "${tmp}/where.test.sh"
+  test::assert_equals 1 "${RC}" || return 1
+  test::assert_contains "${OUT}" "✗ where.test.sh:4  check_even() { assert \$((\$1 % 2)) == 0; }" || return 1
+  test::assert_contains "${OUT}" "called from where.test.sh:6 (test_should_be_even)" || return 1
+}
+
+# errexit is off under if, ||, && and ! and does not reach $( ): a failed
+# assert must fail the case anyway.
+test_should_fail_the_case_wherever_an_assert_fails() {
+  local tmp
+  tmp="$(test::tmp_dir)"
+  write_suite "${tmp}/anywhere.test.sh" '
+check() { assert "$1" == ok; }
+test_under_if() { if check ko; then :; fi; echo "kept"" going"; }
+test_under_or() { check ko || true; echo "kept"" going"; }
+test_in_a_substitution() { local x; x="$(check ko)"; echo "after the substitution"; }
+test::main'
+  run_suite "${tmp}/anywhere.test.sh"
+  test::assert_equals 1 "${RC}" || return 1
+  test::assert_contains "${OUT}" "Failed: 3 / Passed: 0 / Total: 3" || return 1
+  test::assert_not_contains "${OUT}" "kept going" || return 1
+}
+
+# ── capture ──────────────────────────────────────────────────────────────────
+
+test_should_capture_the_status_and_both_outputs() {
+  speak() { echo "out $1"; echo "err $1" >&2; return "$2"; }
+  capture speak hello 3
+  test::assert_equals 3 "${STATUS}" || return 1
+  test::assert_equals "out hello" "${STDOUT}" || return 1
+  test::assert_equals "err hello" "${STDERR}" || return 1
+  capture true
+  test::assert_equals "0||" "${STATUS}|${STDOUT}|${STDERR}" || return 1
+}
+
+# The bash 5.0 trap: `check || return` in a function that is the whole of
+# a subshell. Its status must come through.
+test_should_capture_the_status_of_a_bare_return() {
+  refuse() { false || return; echo "unreachable"; }
+  capture refuse
+  test::assert_equals 1 "${STATUS}" || return 1
+  test::assert_equals "" "${STDOUT}" || return 1
+}
+
+test_should_isolate_the_case_from_a_captured_command() {
+  change() { MARK=changed; exit 4; }
+  MARK=kept
+  capture change
+  test::assert_equals "4 kept" "${STATUS} ${MARK}" || return 1
+}
+
+# ── mock ─────────────────────────────────────────────────────────────────────
+
+test_should_replace_a_command_and_record_its_calls() {
+  mock curl --stdout '{"ok":true}' --stderr "warn" --exit 3
+  local out rc=0
+  out="$(curl -s https://a 2>&1)" || rc=$?
+  test::assert_equals 3 "${rc}" || return 1
+  test::assert_equals $'{"ok":true}\nwarn' "${out}" || return 1
+  bash -c 'curl --from child >/dev/null 2>&1' || true
+  test::assert_equals 2 "$(mock::count curl)" || return 1
+  test::assert_equals $'-s https://a\n--from child' "$(mock::calls curl)" || return 1
+}
+
+test_should_run_the_body_given_to_a_mock() {
+  mock git <<'EOF'
+[[ "$1" == rev-parse ]] && echo abc123
+EOF
+  test::assert_equals abc123 "$(git rev-parse HEAD)" || return 1
+  test::assert_equals abc123 "$(bash -c 'git rev-parse HEAD')" "from a child process" || return 1
+}
+
+test_should_replace_a_function_of_the_code_under_test() {
+  api::fetch() { echo real; }
+  report() { api::fetch; }
+  mock api::fetch --stdout fake
+  test::assert_equals fake "$(report)" || return 1
+  test::assert_equals 1 "$(mock::count api::fetch)" || return 1
+}
+
+test_should_refuse_a_mock_outside_a_case() {
+  local out rc=0
+  out="$(_TEST_TMP="" mock curl 2>&1)" || rc=$?
+  test::assert_equals 2 "${rc}" || return 1
+  test::assert_contains "${out}" "works inside a case only" || return 1
+}
+
+# ── hooks, output, filter ────────────────────────────────────────────────────
+
+test_should_call_the_hooks_around_each_case() {
+  local tmp
+  tmp="$(test::tmp_dir)"
+  write_suite "${tmp}/hooks.test.sh" '
+LOG="'"${tmp}"'/log"
+before_all() { echo "before all" >>"${LOG}"; }
+before_each() { echo "before" >>"${LOG}"; SEEN=yes; }
+after_each() { echo "after" >>"${LOG}"; }
+test_one() { [[ "${SEEN}" == yes ]] && echo "one" >>"${LOG}"; }
+test_two() { echo "two" >>"${LOG}"; false; }
+test::main'
+  run_suite "${tmp}/hooks.test.sh"
+  test::assert_equals 1 "${RC}" || return 1
+  test::assert_equals "before all,before,one,after,before,two,after" "$(paste -sd, "${tmp}/log")" \
+    "after_each runs after a failure too" || return 1
+}
+
+test_should_show_the_output_of_failed_cases_only() {
+  local tmp
+  tmp="$(test::tmp_dir)"
+  write_suite "${tmp}/quiet.test.sh" '
+test_passes() { echo "said by a passing case"; }
+test_fails() { echo "said by a failing case"; false; }
+test::main'
+  run_suite "${tmp}/quiet.test.sh"
+  test::assert_not_contains "${OUT}" "said by a passing case" || return 1
+  test::assert_contains "${OUT}" "│    said by a failing case" || return 1
+  OUT="$(BASHX_VERBOSE=1 NO_COLOR=1 bash "${tmp}/quiet.test.sh" 2>&1)" || true
+  test::assert_contains "${OUT}" "│    said by a passing case" "verbose" || return 1
+}
+
+test_should_run_only_the_cases_matching_the_filter() {
+  local tmp
+  tmp="$(test::tmp_dir)"
+  write_suite "${tmp}/filter.test.sh" '
+test_should_keep_this() { :; }
+test_should_drop_that() { false; }
+test::main'
+  OUT="$(BASHX_FILTER="keep" NO_COLOR=1 bash "${tmp}/filter.test.sh" 2>&1)" || return 1
+  test::assert_contains "${OUT}" "✓ should keep this" || return 1
+  test::assert_not_contains "${OUT}" "drop" || return 1
+  test::assert_contains "${OUT}" "All 1 tests passed" || return 1
+}
+
+test_should_close_the_stdin_of_a_case() {
+  local tmp
+  tmp="$(test::tmp_dir)"
+  write_suite "${tmp}/stdin.test.sh" '
+test_reads() { ! read -r _; }
+test_after() { :; }
+test::main'
+  OUT="$(echo "a line" | NO_COLOR=1 bash "${tmp}/stdin.test.sh" 2>&1)" || return 1
+  test::assert_contains "${OUT}" "All 2 tests passed" || return 1
+}
+
+test::main
