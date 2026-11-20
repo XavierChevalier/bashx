@@ -45,6 +45,23 @@ test_should_run_every_test_file_under_the_root() {
   test::assert_not_contains "${out}" "ran-e" || return 1
 }
 
+# A submodule or a vendored clone (bashx itself, often) has its own tests.
+test_should_leave_nested_repositories_out() {
+  local tmp out
+  tmp="$(test::tmp_dir)"
+  write_stub "${tmp}/mine.test.sh" 'echo ran-mine'
+  write_stub "${tmp}/vendor/lib/theirs.test.sh" 'echo ran-theirs'
+  git -C "${tmp}/vendor/lib" init -q
+  write_stub "${tmp}/vendor/plain/copied.test.sh" 'echo ran-copied'
+  mkdir -p "${tmp}/sub" && echo "gitdir: ../.git/modules/sub" >"${tmp}/sub/.git"
+  write_stub "${tmp}/sub/module.test.sh" 'echo ran-module'
+  out="$(run_runner "${tmp}" 2>&1)" || return 1
+  test::assert_contains "${out}" "ran-mine" || return 1
+  test::assert_contains "${out}" "ran-copied" "a plain copy is part of the project" || return 1
+  test::assert_not_contains "${out}" "ran-theirs" "a nested clone" || return 1
+  test::assert_not_contains "${out}" "ran-module" "a submodule (.git file)" || return 1
+}
+
 test_should_run_only_the_matching_kind() {
   local tmp out
   tmp="$(test::tmp_dir)"
@@ -279,6 +296,7 @@ test_should_print_its_help() {
 
 test::init
 test::run "should run every test file under the root" test_should_run_every_test_file_under_the_root
+test::run "should leave nested repositories out" test_should_leave_nested_repositories_out
 test::run "should run only the matching kind" test_should_run_only_the_matching_kind
 test::run "should fail when no test file is found" test_should_fail_when_no_test_file_is_found
 test::run "should run each file from its own directory" test_should_run_each_file_from_its_own_directory

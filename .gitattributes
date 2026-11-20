@@ -1,0 +1,4 @@
+# Release archives (git archive, GitHub source downloads) hold what runs, not
+# bashx's own tests and CI.
+*.test.sh export-ignore
+/.github export-ignore
