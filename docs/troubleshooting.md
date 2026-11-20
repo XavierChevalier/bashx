@@ -24,7 +24,9 @@ when `BASHX_LIB` is not set. Either install it on the `PATH`, or run
 **`No test files (*.test.sh) under …`**
 The runner only picks files named `*.test.sh`. Rename `test_foo.sh` to
 `foo.test.sh`. Files under `.git`, `node_modules`, `venv`, `.venv`, `.cache`
-and `.bashx` are ignored.
+and `.bashx` are ignored, and so are nested git repositories: a directory
+with its own `.git` (a submodule, a clone) is a separate project. Run
+`bashx test <that directory>` to test it.
 
 **A case fails with no "Assertion failed" message**
 A command failed before any assertion, and errexit ended the case. Its error
