@@ -175,14 +175,10 @@ test::summary() {
 #   is_file  is_dir  exists  !exists                (<actual> is a path)
 #   has <text>  !has <text>  same_as <text or file> (<actual> is a file)
 #
-# An optional last argument is a message printed with the failure.
-# Usage: assert <actual> <operator> [<expected>] [<message>]
+# Usage: assert <actual> <operator> [<expected>]
 assert() {
   local -r actual="${1-}" op="${2-}"
-  local expected="${3-}" ok=0 _TEST_ASSERT_MESSAGE="${4-}"
-  case "${op}" in
-    empty | !empty | is_file | is_dir | exists | !exists) _TEST_ASSERT_MESSAGE="${3-}" ;;
-  esac
+  local expected="${3-}" ok=0
   case "${op}" in
     ==) [[ "${actual}" == "${expected}" ]] && ok=1 ;;
     !=) [[ "${actual}" != "${expected}" ]] && ok=1 ;;
@@ -243,7 +239,6 @@ test::_assert_failed() {
     echo "${_TEST_RED}✗ $(test::_location)${_TEST_RESET}"
     local message
     for message in "$@"; do printf '%s\n' "${message}" | sed 's/^/  /'; done
-    [[ -z "${_TEST_ASSERT_MESSAGE:-}" ]] || printf 'message: %s\n' "${_TEST_ASSERT_MESSAGE}" | sed 's/^/  /'
   } >&2
   [[ -z "${_TEST_FAIL_FLAG}" ]] || : >"${_TEST_FAIL_FLAG}"
   exit 1
