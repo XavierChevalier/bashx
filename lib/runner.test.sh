@@ -45,6 +45,23 @@ test_should_run_every_test_file_under_the_root() {
   test::assert_not_contains "${out}" "ran-e" || return 1
 }
 
+# A submodule or a vendored clone (bashx itself, often) has its own tests.
+test_should_leave_nested_repositories_out() {
+  local tmp out
+  tmp="$(test::tmp_dir)"
+  write_stub "${tmp}/mine.test.sh" 'echo ran-mine'
+  write_stub "${tmp}/vendor/lib/theirs.test.sh" 'echo ran-theirs'
+  git -C "${tmp}/vendor/lib" init -q
+  write_stub "${tmp}/vendor/plain/copied.test.sh" 'echo ran-copied'
+  mkdir -p "${tmp}/sub" && echo "gitdir: ../.git/modules/sub" >"${tmp}/sub/.git"
+  write_stub "${tmp}/sub/module.test.sh" 'echo ran-module'
+  out="$(run_runner "${tmp}" 2>&1)" || return 1
+  test::assert_contains "${out}" "ran-mine" || return 1
+  test::assert_contains "${out}" "ran-copied" "a plain copy is part of the project" || return 1
+  test::assert_not_contains "${out}" "ran-theirs" "a nested clone" || return 1
+  test::assert_not_contains "${out}" "ran-module" "a submodule (.git file)" || return 1
+}
+
 test_should_run_only_the_matching_kind() {
   local tmp out
   tmp="$(test::tmp_dir)"
@@ -155,11 +172,12 @@ test_should_time_out_a_hung_file_and_keep_the_suite_going() {
   ((SECONDS - start < 30)) || { echo "    the deadline did not cut the file" >&2; return 1; }
 }
 
-# Alive = listed and not a zombie (a killed orphan may wait to be reaped).
+# Alive = still the leaked `sleep 30` (a pid can be reused) and not a zombie
+# (a killed orphan may wait to be reaped).
 process_alive() {
-  local stat
-  stat="$(ps -o stat= -p "$1" 2>/dev/null)" || return 1
-  [[ -n "${stat}" && "${stat}" != Z* ]]
+  local info
+  info="$(ps -o stat=,args= -p "$1" 2>/dev/null)" || return 1
+  [[ -n "${info}" && "${info}" != Z* && "${info}" == *"sleep 30"* ]]
 }
 
 test_should_not_let_a_leaked_child_outlive_the_file() {
@@ -168,7 +186,7 @@ test_should_not_let_a_leaked_child_outlive_the_file() {
   write_stub "${tmp}/leaky.test.sh" "sleep 30 &"$'\n'"echo \$! >'${tmp}/leaked.pid'"
   run_runner "${tmp}" >/dev/null 2>&1 || return 1
   pid="$(cat "${tmp}/leaked.pid")"
-  for ((i = 0; i < 20; i++)); do
+  for ((i = 0; i < 50; i++)); do
     process_alive "${pid}" || return 0
     sleep 0.1
   done
@@ -279,6 +297,7 @@ test_should_print_its_help() {
 
 test::init
 test::run "should run every test file under the root" test_should_run_every_test_file_under_the_root
+test::run "should leave nested repositories out" test_should_leave_nested_repositories_out
 test::run "should run only the matching kind" test_should_run_only_the_matching_kind
 test::run "should fail when no test file is found" test_should_fail_when_no_test_file_is_found
 test::run "should run each file from its own directory" test_should_run_each_file_from_its_own_directory

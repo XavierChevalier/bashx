@@ -89,7 +89,7 @@ scripts.
 | Option | Default | Effect |
 | --- | --- | --- |
 | `-r <root>` | git root of the current directory, or the current directory | Project root the paths are relative to. |
-| `-x <regex>` | | Leave out scripts whose path matches this extended regex, e.g. `'^(vendor\|examples)/'`. Test files and `fixtures/` are always left out. |
+| `-x <regex>` | | Leave out scripts whose path matches this extended regex, e.g. `'^(vendor\|examples)/'`. Test files, `fixtures/` and a vendored bashx are always left out. |
 | `-f <format>` | `summary` | Output format, below. |
 | `-h` | | Print the help. |
 
@@ -184,10 +184,12 @@ The directory holding `bashx.sh`. Test files source it with
 
 ## bashx version
 
+<!-- x-release-please-start-version -->
 ```console
 $ bashx version
 bashx 0.1.0
 ```
+<!-- x-release-please-end -->
 
 Also `bashx --version` and `bashx -v`.
 

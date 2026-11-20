@@ -34,8 +34,9 @@ runner::cpu_count() {
   getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4
 }
 
-# Test files under <root>, sorted; skips .git, node_modules, virtualenvs and
-# other dependency dirs.
+# Test files under <root>, sorted. Skips .git, node_modules, virtualenvs and
+# other dependency dirs, and nested git repositories (submodules, vendored
+# clones such as bashx itself): their tests are theirs to run.
 # Usage: runner::discover <root> [<kind>]
 runner::discover() {
   local -r root="$1" kind="${2:-}"
@@ -43,7 +44,11 @@ runner::discover() {
   [[ -z "${kind}" ]] || pattern="*.${kind}.test.sh"
   find "${root}" \
     \( -name .git -o -name node_modules -o -name .venv -o -name venv -o -name .cache -o -name .bashx \) -prune -o \
-    -type f -name "${pattern}" -print | LC_ALL=C sort
+    -type f -name "${pattern}" -print \
+    | BASHX_NESTED="$(find "${root}" -mindepth 2 -name .git 2>/dev/null | sed 's|\.git$||')" awk '
+      BEGIN { n = split(ENVIRON["BASHX_NESTED"], dirs, "\n") }
+      { for (i = 1; i <= n; i++) if (dirs[i] != "" && index($0, dirs[i]) == 1) next; print }' \
+    | LC_ALL=C sort
 }
 
 # Relative path of <file> under <root> (unchanged when outside it).
@@ -222,10 +227,15 @@ runner::run_one() {
   # watchdog would keep a caller's command substitution open.
   local exit_code=0 pid
   if command -v perl >/dev/null 2>&1; then
-    (cd "$(dirname "${file}")" && env "${env[@]}" perl -e 'setpgrp(0,0); alarm shift @ARGV; exec @ARGV' \
-      "${timeout_s}" bash "${file}") >"${out}" 2>&1 </dev/null &
+    # perl leads a new process group and writes its id itself: $! can be the
+    # subshell instead (bash < 5.2 forks before the last command of `( … )`).
+    (cd "$(dirname "${file}")" && env "${env[@]}" perl -e '
+      setpgrp(0, 0);
+      open(my $f, ">", shift @ARGV) or die $!; print $f getpgrp(); close($f);
+      alarm shift @ARGV;
+      exec @ARGV or die $!' \
+      "${work}/${id}.pgid" "${timeout_s}" bash "${file}") >"${out}" 2>&1 </dev/null &
     pid=$!
-    printf '%s' "${pid}" >"${work}/${id}.pgid"
   else
     (cd "$(dirname "${file}")" && env "${env[@]}" bash "${file}") >"${out}" 2>&1 </dev/null &
     pid=$!

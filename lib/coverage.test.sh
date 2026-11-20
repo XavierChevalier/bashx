@@ -62,11 +62,13 @@ test_should_cover_what_xtrace_reports_for_the_sample() {
   write_sample "${dir}/s.sh"
   git -C "${dir}" add s.sh
   mkdir "${dir}/traces"
-  # BASH_ENV unset: under `bashx test --coverage` the tracer would take the trace.
-  (cd "${dir}" && BASH_ENV='' PS4='+${BASH_SOURCE[0]-}:${LINENO}: ' bash -x s.sh >/dev/null 2>"${dir}/traces/1.trace")
+  # Through the real tracer: as root, bash ignores a PS4 from the environment.
+  (cd "${dir}" && BASH_ENV="$(dirname "${COVERAGE_SH}")/coverage-trace.bash" \
+    BASHX_COVERAGE_TRACE_DIR="${dir}/traces" bash s.sh >/dev/null)
   bash "${COVERAGE_SH}" covered -r "${dir}" "${dir}/traces" >"${dir}/covered.tsv"
   # Everything but the two branches not taken (else, *) ran.
-  test::assert_equals "covered=10 coverable=12 pct=83.3" "$(bash "${COVERAGE_SH}" report -r "${dir}" "${dir}/covered.tsv")"
+  test::assert_equals "covered=10 coverable=12 pct=83.3" "$(bash "${COVERAGE_SH}" report -r "${dir}" "${dir}/covered.tsv")" \
+    "trace: $(cat "${dir}"/traces/*.trace | head -5 | tr '\n' '|') covered: $(tr '\n\t' '| ' <"${dir}/covered.tsv")"
   test::assert_equals "s.sh	10	12" "$(bash "${COVERAGE_SH}" report -r "${dir}" -f tsv "${dir}/covered.tsv" | tail -n +2)"
 }
 
@@ -91,6 +93,8 @@ c.sh	1" "$(coverage::covered "${dir}" "${dir}/traces")"
 test_should_resolve_relative_paths_against_the_process_directory() {
   local dir
   dir="$(test::tmp_dir)"
+  # A root spelled with "//" (macOS TMPDIR ends in "/") still matches.
+  dir="${dir%/*}//${dir##*/}"
   mkdir "${dir}/traces"
   printf '%s\n' "#cwd ${dir}/sub" "+./x.sh:2: a" "+../y.sh:5: b" "+${dir}/z.sh:1: c" >"${dir}/traces/1.trace"
   printf '%s\n' "#cwd /elsewhere" "+./w.sh:1: d" >"${dir}/traces/2.trace"
@@ -139,6 +143,18 @@ lib/x.sh:6: return 1
 y.sh:1: echo z" "$(bash "${COVERAGE_SH}" report -r "${dir}" -f uncovered "${dir}/covered.tsv")"
 }
 
+# A project vendoring bashx scores its own scripts, not bashx's.
+test_should_leave_a_vendored_bashx_out() {
+  local dir
+  dir="$(test::tmp_dir)"
+  mkdir -p "${dir}/vendor/bashx"
+  cp -R "$(dirname "${COVERAGE_SH}")" "${dir}/vendor/bashx/lib"
+  printf 'echo a\n' >"${dir}/app.sh"
+  printf 'app.sh\t1\n' >"${dir}/covered.tsv"
+  test::assert_equals "covered=1 coverable=1 pct=100.0" \
+    "$(bash "${dir}/vendor/bashx/lib/coverage.sh" report -r "${dir}" "${dir}/covered.tsv")" || return 1
+}
+
 test_should_refuse_an_unknown_command_or_format() {
   local rc=0
   bash "${COVERAGE_SH}" nope >/dev/null 2>&1 || rc=$?
@@ -157,6 +173,7 @@ function main() {
   test::run "should leave out scripts matching an exclusion" test_should_leave_out_scripts_matching_an_exclusion
   test::run "should score the union of several covered files and skip tests" test_should_score_the_union_of_several_covered_files_and_skip_tests
   test::run "should list the lines no test ran" test_should_list_the_lines_no_test_ran
+  test::run "should leave a vendored bashx out" test_should_leave_a_vendored_bashx_out
   test::run "should refuse an unknown command or format" test_should_refuse_an_unknown_command_or_format
   test::summary
 }

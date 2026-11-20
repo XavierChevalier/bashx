@@ -192,9 +192,15 @@ function mutation::own_tests() {
 function mutation::sandbox() {
   local -r root="$1" dest="$2"
   mkdir -p "${dest}"
+  # Files that exist (a tracked file deleted in the working tree is listed
+  # too), one per line for `tar -T`, which GNU, BSD and busybox tar all read.
+  local -r list="${dest}.files"
   git -C "${root}" ls-files -z -co --exclude-standard \
-    | (cd "${root}" && xargs -0 tar -cf - --ignore-failed-read 2>/dev/null) \
-    | tar -xf - -C "${dest}"
+    | (cd "${root}" && while IFS= read -r -d '' file; do
+      [[ ! -e "${file}" && ! -L "${file}" ]] || printf '%s\n' "${file}"
+    done) >"${list}"
+  (cd "${root}" && tar -cf - -T "${list}") | tar -xf - -C "${dest}"
+  rm -f -- "${list}"
   git -C "${dest}" init -q
   git -C "${dest}" add -A
   git -C "${dest}" -c user.name=mutation -c user.email=mutation@localhost \

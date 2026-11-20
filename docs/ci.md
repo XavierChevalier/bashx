@@ -23,10 +23,12 @@ jobs:
 
 Or cloned at a fixed tag:
 
+<!-- x-release-please-start-version -->
 ```yaml
       - run: git clone --depth 1 --branch v0.1.0 https://github.com/XavierChevalier/bashx.git /tmp/bashx
       - run: /tmp/bashx/bin/bashx test
 ```
+<!-- x-release-please-end -->
 
 `CI` being set turns the live status line off; the output stays plain.
 

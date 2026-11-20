@@ -43,8 +43,9 @@ Every bash process the tests start (the test file, the scripts it runs,
 output and stderr your tests check are untouched.
 
 The score is over the project's scripts: the `*.sh` files git tracks or would
-track (every `*.sh` outside git), minus `*.test.sh` files and anything under
-a `fixtures/` directory. Leave out more with `-x`:
+track (every `*.sh` outside git), minus `*.test.sh` files, anything under a
+`fixtures/` directory, and bashx itself when the project vendors it (e.g.
+`vendor/bashx/`). Leave out more with `-x`:
 
 ```bash
 bashx coverage report -x '^(vendor|examples)/' coverage/covered.tsv
