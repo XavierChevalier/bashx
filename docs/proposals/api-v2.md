@@ -203,10 +203,14 @@ assert "${STDERR}" contains "no such file: /nope"
 assert "${STDOUT}" empty
 ```
 
-`capture` lance la commande dans un sous-shell, stdin fermé, et remplit
-`STATUS`, `STDOUT`, `STDERR` (fins de ligne retirées comme avec `$( )`). Le
-`set +e` / `set -e` est fait à l'intérieur : impossible d'oublier le
-`|| rc=$?`.
+`capture` lance la commande dans une substitution `$( )`, stdin fermé, et
+remplit `STATUS`, `STDOUT`, `STDERR` (fins de ligne retirées comme avec
+`$( )`). Le `|| STATUS=$?` est fait à l'intérieur : impossible de l'oublier.
+
+- **Pas de `( "$@" ); STATUS=$?` sous `set +e`** : sous bash 5.0, la CI du
+  prototype a lu 0 au lieu de 2 pour un `cmd || return` raté. La forme
+  `$( ) || STATUS=$?`, celle des tests v1, donne le bon code sur toutes les
+  versions testées.
 
 - **Majuscules, exprès** : shellcheck (lancé en CI sur tous les `.sh`) signale
   `status` en minuscules comme « jamais assigné » (SC2154) ; il ne le fait pas

@@ -130,11 +130,10 @@ test::cases() {
 # shellcheck disable=SC2034 # read by the test file
 capture() {
   local -r dir="$(mktemp -d "${_TEST_TMP:-${TMPDIR:-/tmp}}/capture.XXXXXX")"
-  set +e
-  ( "$@" ) >"${dir}/out" 2>"${dir}/err" </dev/null
-  STATUS=$?
-  set -e
-  STDOUT="$(<"${dir}/out")"
+  # The form the v1 tests use: `( "$@" ); STATUS=$?` under set +e read 0
+  # for a failed `cmd || return` on bash 5.0 in CI.
+  STATUS=0
+  STDOUT="$("$@" 2>"${dir}/err" </dev/null)" || STATUS=$?
   STDERR="$(<"${dir}/err")"
 }
 test::capture() { capture "$@"; }
