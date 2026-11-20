@@ -37,9 +37,9 @@ test_should_agree_on_the_version_everywhere() {
   manifest="$(sed -n 's/^ *"\." *: *"\(.*\)".*$/\1/p' "${root}/.release-please-manifest.json")"
   file="$(cat "${root}/version.txt")"
   changelog="$(sed -n 's/^## \[\([0-9][^]]*\)\].*$/\1/p' "${root}/CHANGELOG.md" | head -1)"
-  assert "${cli}" == "bashx ${manifest}" "bin/bashx vs .release-please-manifest.json"
-  assert "${file}" == "${manifest}" "version.txt"
-  assert "${changelog}" == "${manifest}" "latest CHANGELOG.md section"
+  assert "${cli}" == "bashx ${manifest}"  # bin/bashx vs .release-please-manifest.json
+  assert "${file}" == "${manifest}"  # version.txt
+  assert "${changelog}" == "${manifest}"  # latest CHANGELOG.md section
 }
 
 test_should_refuse_an_unknown_command() {

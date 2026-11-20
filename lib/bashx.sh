@@ -178,7 +178,11 @@ test::summary() {
 # Usage: assert <actual> <operator> [<expected>]
 assert() {
   local -r actual="${1-}" op="${2-}"
-  local expected="${3-}" ok=0
+  local expected="${3-}" ok=0 arity=3
+  case "${op}" in
+    empty | !empty | is_file | is_dir | exists | !exists) arity=2 ;;
+  esac
+  (($# <= arity)) || test::_assert_failed "assert: too many arguments for '${op}' ($#): $(printf '%q ' "$@")"
   case "${op}" in
     ==) [[ "${actual}" == "${expected}" ]] && ok=1 ;;
     !=) [[ "${actual}" != "${expected}" ]] && ok=1 ;;

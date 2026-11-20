@@ -218,6 +218,19 @@ A failure, from a helper, with a multi-line value:
 │       5.tar
 ```
 
+`assert` takes no message, and refuses extra arguments (a message left from
+a v1 assertion fails with `assert: too many arguments`). The failure already
+prints the source line, so a trailing comment shows with it; a value worth
+seeing goes in an `echo` before, which shows only when the case fails:
+
+```bash
+for opt in --jobs=0 --timeout=x; do
+  capture bashx test "${opt}"
+  echo "option: ${opt}"
+  assert "${STATUS}" == 2    # bad options exit 2
+done
+```
+
 `test::assert` is the same function, for a file whose code under test
 defines its own `assert`.
 

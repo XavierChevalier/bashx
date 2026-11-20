@@ -67,7 +67,8 @@ test_should_cover_what_xtrace_reports_for_the_sample() {
     BASHX_COVERAGE_TRACE_DIR="${dir}/traces" bash s.sh >/dev/null)
   bash "${COVERAGE_SH}" covered -r "${dir}" "${dir}/traces" >"${dir}/covered.tsv"
   # Everything but the two branches not taken (else, *) ran.
-  assert "$(bash "${COVERAGE_SH}" report -r "${dir}" "${dir}/covered.tsv")" == "covered=10 coverable=12 pct=83.3" "trace: $(cat "${dir}"/traces/*.trace | head -5 | tr '\n' '|') covered: $(tr '\n\t' '| ' <"${dir}/covered.tsv")"
+  echo "trace: $(cat "${dir}"/traces/*.trace | head -5 | tr '\n' '|') covered: $(tr '\n\t' '| ' <"${dir}/covered.tsv")"
+  assert "$(bash "${COVERAGE_SH}" report -r "${dir}" "${dir}/covered.tsv")" == "covered=10 coverable=12 pct=83.3"
   assert "$(bash "${COVERAGE_SH}" report -r "${dir}" -f tsv "${dir}/covered.tsv" | tail -n +2)" == "s.sh	10	12"
 }
 

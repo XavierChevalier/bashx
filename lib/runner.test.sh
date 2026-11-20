@@ -40,8 +40,8 @@ test_should_run_every_test_file_under_the_root() {
   out="$(run_runner "${tmp}" 2>&1)"
   assert "${out}" contains "ran-a"
   assert "${out}" contains "ran-b"
-  assert "${out}" !contains "ran-c" "not a test file"
-  assert "${out}" !contains "ran-d" "dependencies are skipped"
+  assert "${out}" !contains "ran-c"  # not a test file
+  assert "${out}" !contains "ran-d"  # dependencies are skipped
   assert "${out}" !contains "ran-e"
 }
 
@@ -57,9 +57,9 @@ test_should_leave_nested_repositories_out() {
   write_stub "${tmp}/sub/module.test.sh" 'echo ran-module'
   out="$(run_runner "${tmp}" 2>&1)"
   assert "${out}" contains "ran-mine"
-  assert "${out}" contains "ran-copied" "a plain copy is part of the project"
-  assert "${out}" !contains "ran-theirs" "a nested clone"
-  assert "${out}" !contains "ran-module" "a submodule (.git file)"
+  assert "${out}" contains "ran-copied"  # a plain copy is part of the project
+  assert "${out}" !contains "ran-theirs"  # a nested clone
+  assert "${out}" !contains "ran-module"  # a submodule (.git file)
 }
 
 test_should_run_only_the_matching_kind() {
@@ -219,11 +219,12 @@ test_should_refuse_bad_options() {
   for opt in --shard=4/3 --shard=0/2 --shard=x --jobs=0 --timeout=x --nope; do
     rc=0
     run_runner "${tmp}" "${opt}" >/dev/null 2>&1 || rc=$?
-    assert "${rc}" == 2 "exit code of ${opt}"
+    echo "exit code of ${opt}"
+    assert "${rc}" == 2
   done
   rc=0
   bash "${RUNNER}" "${tmp}/missing" >/dev/null 2>&1 || rc=$?
-  assert "${rc}" == 2 "a missing root"
+  assert "${rc}" == 2  # a missing root
 }
 
 test_should_balance_shards_on_recorded_durations() {
@@ -277,7 +278,7 @@ test_should_write_markdown_json_and_junit_reports() {
   assert "${tmp}/test_report.junit" has '<testcase classname="bashx" name="bad.test.sh">'
   local rc=0
   (cd "${tmp}" && run_runner tests --report=yaml >/dev/null 2>&1) || rc=$?
-  assert "${rc}" == 1 "unknown format"
+  assert "${rc}" == 1  # unknown format
 }
 
 test_should_measure_the_coverage_of_scripts_the_tests_run() {
@@ -302,11 +303,11 @@ test_should_drop() { :; }
 test::main'
   out="$(run_runner "${tmp}" --filter=keep -v 2>&1)"
   assert "${out}" contains "should keep"
-  assert "${out}" !contains "should drop" "filtered out"
-  assert "${out}" contains "said by keep" "verbose"
+  assert "${out}" !contains "should drop"  # filtered out
+  assert "${out}" contains "said by keep"  # verbose
   assert "${out}" contains "1 passed, 0 failed, 1 total"
   out="$(run_runner "${tmp}" 2>&1)"
-  assert "${out}" !contains "said by keep" "quiet by default"
+  assert "${out}" !contains "said by keep"  # quiet by default
 }
 
 test_should_print_its_help() {

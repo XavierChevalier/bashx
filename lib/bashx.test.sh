@@ -39,7 +39,8 @@ test::run "polluter" polluter
 test::run "observer" observer
 test::summary'
   run_suite "${tmp}/iso.test.sh"
-  assert "${RC}" == 0 "${OUT}"
+  echo "${OUT}"
+  assert "${RC}" == 0
   assert "${OUT}" contains "All 2 tests passed"
 }
 
@@ -86,7 +87,8 @@ test::summary'
   run_suite "${tmp}/chain.test.sh"
   assert "${RC}" == 1
   assert "${OUT}" contains "Failed: 1 / Passed: 1 / Total: 2"
-  assert "$(grep -c '└' <<<"${OUT}")" == 1 "one summary: ${OUT}"
+  echo "one summary: ${OUT}"
+  assert "$(grep -c '└' <<<"${OUT}")" == 1
 }
 
 test_should_print_what_each_failed_assertion_expected() {
@@ -176,13 +178,14 @@ test::run two record
 test::run shared shared
 test::summary"
   run_suite "${tmp}/tmp.test.sh"
-  assert "${RC}" == 0 "${OUT}"
-  assert "$(sort -u "${tmp}/dirs" | wc -l)" == 4 "every dir is new"
+  echo "${OUT}"
+  assert "${RC}" == 0
+  assert "$(sort -u "${tmp}/dirs" | wc -l)" == 4  # every dir is new
   local dir
   while IFS= read -r dir; do
-    assert "${dir}" !exists "removed with its case"
+    assert "${dir}" !exists  # removed with its case
   done <"${tmp}/dirs"
-  assert "$(cat "${tmp}/suite")" !exists "removed with the file"
+  assert "$(cat "${tmp}/suite")" !exists  # removed with the file
 }
 
 test_should_refuse_a_suite_tmp_dir_before_init() {
@@ -236,7 +239,8 @@ helper() { :; }
 test_a_later_one() { :; }
 test::main'
   run_suite "${tmp}/main.test.sh"
-  assert "${RC}" == 0 "${OUT}"
+  echo "${OUT}"
+  assert "${RC}" == 0
   assert "${OUT}" matches "✓ should come first.*✓ a later one"
   assert "${OUT}" !contains "helper"
   assert "${OUT}" contains "All 2 tests passed"
@@ -250,7 +254,8 @@ test_once() { echo ran >>"$1"; }
 test::run "explicit" test_once "'"${tmp}"'/log"
 test::main'
   run_suite "${tmp}/twice.test.sh"
-  assert "${RC}" == 0 "${OUT}"
+  echo "${OUT}"
+  assert "${RC}" == 0
   assert "$(wc -l <"${tmp}/log")" == 1
 }
 
@@ -279,7 +284,8 @@ a          b     a+b
 EOF
 test::main'
   run_suite "${tmp}/table.test.sh"
-  assert "${RC}" == 0 "${OUT}"
+  echo "${OUT}"
+  assert "${RC}" == 0
   assert "${OUT}" contains "✓ should join [a b a+b]"
   assert "${OUT}" contains "✓ should join [x y z x y+z]"
   assert "${OUT}" contains "All 3 tests passed"
@@ -348,16 +354,17 @@ test_should_print_what_each_failed_assert_expected() {
     # shellcheck disable=SC2086 # the row holds the arguments
     out="$(assert_output ${row%%|*})" || true
     assert "${out}" contains "${row#*|}"
-    assert "${out}" contains "✗ bashx.test.sh:" "the line of the assert"
+    assert "${out}" contains "✗ bashx.test.sh:"  # the line of the assert
   done
 }
 
-test_should_print_the_message_of_a_failed_assert() {
+# A message left from a v1 assertion must not be ignored silently.
+test_should_refuse_extra_arguments() {
   local out
-  out="$(assert_output a == b "the config is read first")" || true
-  assert "${out}" contains "message: the config is read first"
-  out="$(assert_output x empty "nothing left behind")" || true
-  assert "${out}" contains "message: nothing left behind"
+  out="$(assert_output a == a "a message")" || true
+  assert "${out}" contains "assert: too many arguments for '==' (4)"
+  out="$(assert_output "" empty "a message")" || true
+  assert "${out}" contains "assert: too many arguments for 'empty' (3)"
 }
 
 test_should_show_a_diff_for_multiline_values() {
@@ -445,7 +452,7 @@ test_should_run_the_body_given_to_a_mock() {
 [[ "$1" == rev-parse ]] && echo abc123
 EOF
   assert "$(git rev-parse HEAD)" == abc123
-  assert "$(bash -c 'git rev-parse HEAD')" == abc123 "from a child process"
+  assert "$(bash -c 'git rev-parse HEAD')" == abc123  # from a child process
 }
 
 test_should_replace_a_function_of_the_code_under_test() {
@@ -478,7 +485,7 @@ test_two() { echo "two" >>"${LOG}"; false; }
 test::main'
   run_suite "${tmp}/hooks.test.sh"
   assert "${RC}" == 1
-  assert "$(paste -sd, "${tmp}/log")" == "before all,before,one,after,before,two,after" "after_each runs after a failure too"
+  assert "$(paste -sd, "${tmp}/log")" == "before all,before,one,after,before,two,after"  # after_each runs after a failure too
 }
 
 test_should_show_the_output_of_failed_cases_only() {
@@ -492,7 +499,7 @@ test::main'
   assert "${OUT}" !contains "said by a passing case"
   assert "${OUT}" contains "│    said by a failing case"
   OUT="$(BASHX_VERBOSE=1 NO_COLOR=1 bash "${tmp}/quiet.test.sh" 2>&1)" || true
-  assert "${OUT}" contains "│    said by a passing case" "verbose"
+  assert "${OUT}" contains "│    said by a passing case"  # verbose
 }
 
 test_should_run_only_the_cases_matching_the_filter() {

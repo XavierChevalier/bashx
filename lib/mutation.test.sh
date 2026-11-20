@@ -125,7 +125,7 @@ test_should_report_killed_and_surviving_mutants() {
   assert "${out}" contains "| rel-lt | \`-lt\` → \`-le\` | 1 | 0 | 0 | 1 | 0 | 0.0% |"
   assert "${out}" contains "| rel-gt | \`-gt\` → \`-ge\` | 1 | 1 | 0 | 0 | 0 | 100.0% |"
   assert "${out}" contains "\`lib.sh:3\` rel-lt"
-  assert "$(cksum <"${dir}/lib.sh")" == "${before}" "the checkout is never mutated"
+  assert "$(cksum <"${dir}/lib.sh")" == "${before}"  # the checkout is never mutated
 }
 
 test_should_kill_a_mutant_whose_test_file_exits_0_with_failed_cases() {
@@ -259,7 +259,7 @@ EOF
   assert "$(wc -l <"${dir}/out.tsv")" == 4
 
   mutation::report_script "${dir}" lib.sh 1 1234 56 "" tests/a.unit.test.sh >/dev/null
-  assert "$(wc -l <"${dir}/out.tsv")" == 4 "no TSV asked: nothing appended"
+  assert "$(wc -l <"${dir}/out.tsv")" == 4  # no TSV asked: nothing appended
 }
 
 # Helpers read their arguments, never the caller's variables of the same names.
@@ -286,7 +286,7 @@ test_should_ignore_the_caller_s_variables() {
 | \`lib.sh\` | 1 | 1 | 0 |"
   : >"${dir}/none"
   out="$(mutation::report_survivors lib.sh "${dir}/none" "${dir}/lib.sh")" || { echo "    status $? without survivors" >&2; return 1; }
-  assert "${out}" == "" "no survivor: no list"
+  assert "${out}" == ""  # no survivor: no list
 }
 
 test_should_summarise_several_scripts_only() {
@@ -364,7 +364,7 @@ test_should_read_a_test_s_exit_deadline_and_result_file() {
   echo 'echo failed=1 >"${BASHX_RESULT_FILE}"' >"${dir}/swallowed.sh"
   local t
   for t in pass fail slow swallowed pass; do out+="$(mutation::run_test "${dir}" 1 "${t}.sh") "; done
-  assert "${out}" == "0 3 124 1 0 " "a result file is not read by the next test"
+  assert "${out}" == "0 3 124 1 0 "  # a result file is not read by the next test
 }
 
 test_should_print_progress_while_workers_run() {
@@ -377,7 +377,7 @@ test_should_print_progress_while_workers_run() {
   assert "$(head -1 <<<"${err}")" == "mutation: 1/5"
   sleep 1.5 &
   pid=$!
-  assert "$(mutation::progress 5 "${dir}/results" "${pid}" 2>&1)" == "" "every 10 s by default"
+  assert "$(mutation::progress 5 "${dir}/results" "${pid}" 2>&1)" == ""  # every 10 s by default
 }
 
 test_should_list_the_operators() {
@@ -434,7 +434,8 @@ test_should_refuse_bad_options_with_usage() {
     args="${row%|*}" want="${row#*|}" rc=0
     # shellcheck disable=SC2086 # args split on purpose
     out="$(cd "${dir}" && "${MUTATION_SH}" -j 1 ${args} 2>&1)" || rc=$?
-    assert "${rc}" == "${want}" "exit code of '${args}': ${out}"
+    echo "exit code of '${args}': ${out}"
+    assert "${rc}" == "${want}"
   done
   out="$(cd "${dir}" && "${MUTATION_SH}" -h)"
   assert "${out}" contains "Usage:"
@@ -459,7 +460,8 @@ test_should_run_every_mutant_of_several_scripts() {
   out="$(cd "${dir}" && TMPDIR="${tmpdir}" MUTATION_PROGRESS_EVERY=1 "${MUTATION_SH}" \
     -j 2 -T 1 -s 90 -o rel,stmt-del,arith -r "${tmpdir}/../out.tsv" lib.sh lib2.sh 2>"${tmpdir}/../err")" || rc=$?
   err="$(cat "${tmpdir}/../err")"
-  assert "${rc}" == 1 "lib.sh scores under 90 %: ${err}"
+  echo "lib.sh scores under 90 %: ${err}"
+  assert "${rc}" == 1
   assert "$(head -1 <<<"${out}")|$(sed -n 2p <<<"${out}")" == "## Mutation testing|"
   assert "${out}" contains "| rel-eq | \`-eq\` → \`-ne\` | 1 | 0 | 1 | 0 | 0 | 100.0% |"
   assert "${out}" contains "| stmt-del | command → \`:\` | 5 | 3 | 0 | 0 | 2 | 100.0% |"
@@ -486,8 +488,8 @@ test_should_run_every_mutant_of_several_scripts() {
   assert "$(tail -n +2 "${tmpdir}/../out.tsv" | wc -l)" == 12
   awk -F'\t' 'NR > 1 && !($5 ~ /^[0-9]+$/ && $5 < 60000) { bad = 1 } END { exit bad }' "${tmpdir}/../out.tsv" \
     || { echo "    ms column out of range" >&2; return 1; }
-  assert "$(ls -A "${tmpdir}")" == "" "work dir removed"
-  assert "$(cat "${dir}"/*.sh | cksum)" == "${before}" "the checkout is never mutated"
+  assert "$(ls -A "${tmpdir}")" == ""  # work dir removed
+  assert "$(cat "${dir}"/*.sh | cksum)" == "${before}"  # the checkout is never mutated
 }
 
 test_should_run_sampled_pairs_against_the_given_test() {
@@ -496,7 +498,7 @@ test_should_run_sampled_pairs_against_the_given_test() {
   make_cli_repo "${dir}"
   mv "${dir}/lib2.unit.test.sh" "${dir}/check2.sh"
   out="$(cd "${dir}" && "${MUTATION_SH}" -j 1 -k 2 -m 2 -o arith,stmt-del -t check2.sh lib2.sh 2>/dev/null)"
-  assert "${out}" !contains "<details>" "no survivor, no survivor list"
+  assert "${out}" !contains "<details>"  # no survivor, no survivor list
   assert "${out}" contains "Tests: \`check2.sh\` ("
   assert "${out}" contains "· order 2 ·"
   assert "${out}" contains "| **Total** |  | 2 | 2 | 0 | 0 | 0 | 100.0% |"
