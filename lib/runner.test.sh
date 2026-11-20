@@ -172,11 +172,12 @@ test_should_time_out_a_hung_file_and_keep_the_suite_going() {
   ((SECONDS - start < 30)) || { echo "    the deadline did not cut the file" >&2; return 1; }
 }
 
-# Alive = listed and not a zombie (a killed orphan may wait to be reaped).
+# Alive = still the leaked `sleep 30` (a pid can be reused) and not a zombie
+# (a killed orphan may wait to be reaped).
 process_alive() {
-  local stat
-  stat="$(ps -o stat= -p "$1" 2>/dev/null)" || return 1
-  [[ -n "${stat}" && "${stat}" != Z* ]]
+  local info
+  info="$(ps -o stat=,args= -p "$1" 2>/dev/null)" || return 1
+  [[ -n "${info}" && "${info}" != Z* && "${info}" == *"sleep 30"* ]]
 }
 
 test_should_not_let_a_leaked_child_outlive_the_file() {
@@ -185,7 +186,7 @@ test_should_not_let_a_leaked_child_outlive_the_file() {
   write_stub "${tmp}/leaky.test.sh" "sleep 30 &"$'\n'"echo \$! >'${tmp}/leaked.pid'"
   run_runner "${tmp}" >/dev/null 2>&1 || return 1
   pid="$(cat "${tmp}/leaked.pid")"
-  for ((i = 0; i < 20; i++)); do
+  for ((i = 0; i < 50; i++)); do
     process_alive "${pid}" || return 0
     sleep 0.1
   done

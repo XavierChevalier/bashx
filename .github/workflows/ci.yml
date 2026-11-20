@@ -51,7 +51,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Tests in bash:${{ matrix.bash }}
         run: |
-          docker run --rm -v "${PWD}:/src" -w /src "bash:${{ matrix.bash }}" sh -euc '
+          docker run --rm --init -v "${PWD}:/src" -w /src "bash:${{ matrix.bash }}" sh -euc '
             apk add --no-cache coreutils findutils git perl procps >/dev/null
             git config --global --add safe.directory /src
             bash --version | head -1
