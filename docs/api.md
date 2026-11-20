@@ -174,7 +174,7 @@ the cases whose description contains it.
 ### assert
 
 ```text
-assert <actual> <operator> [<expected>]
+assert <actual> <operator> [<expected>] [<message>]
 ```
 
 Checks one thing, in the same order every time. On failure it prints the
@@ -203,6 +203,16 @@ assert "$(wc -l <"${log}")" -ge 3
 assert "${dir}/cache" !exists
 assert "${dir}/app.conf" has "port=8080"
 assert "${dir}/report.md" same_as "$(dirname "${BASH_SOURCE[0]}")/fixtures/report.md"
+```
+
+The optional last argument is printed with the failure, as `message: …`:
+useful in a loop, or to dump what explains the failure.
+
+```bash
+for opt in --jobs=0 --timeout=x; do
+  capture bashx test "${opt}"
+  assert "${STATUS}" == 2 "exit code of ${opt}"
+done
 ```
 
 A failure, from a helper, with a multi-line value:
@@ -254,7 +264,7 @@ never assigned. `test::capture` is the same function.
 
 The assertions of bashx 0.1 are still there and unchanged. Unlike `assert`,
 they return 1 and rely on errexit to end the case, so they do nothing under
-`if` or `||`, and take an optional last `[message]`.
+`if` or `||`. Both take an optional last `[message]`.
 
 | v1 | With `assert` |
 | --- | --- |
