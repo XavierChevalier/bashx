@@ -26,6 +26,8 @@ Runs every *.test.sh under <root> (default: the git root, or the current dir).
   --record-durations=FILE write each file's wall time to FILE
   --coverage=DIR          trace the run, write DIR/covered.tsv, print the score
   --report=FORMAT         also write test_report.FORMAT (markdown, json, junit)
+  --filter=TEXT           only the cases whose description contains TEXT
+  -v, --verbose           show what passing cases print, too
   -h, --help              this help
 USAGE
 }
@@ -386,6 +388,8 @@ runner::main() {
       --record-durations=*) record_durations="${arg#*=}" ;;
       --coverage=*) coverage_dir="${arg#*=}" ;;
       --report=*) report="${arg#*=}" ;;
+      --filter=*) export BASHX_FILTER="${arg#*=}" ;;
+      -v | --verbose) export BASHX_VERBOSE=1 ;;
       -h | --help) runner::usage; return 0 ;;
       -*) echo "Unknown option: ${arg}" >&2; runner::usage >&2; return 2 ;;
       *) root="${arg}" ;;

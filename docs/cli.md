@@ -40,6 +40,8 @@ current directory, or the current directory outside git. Details:
 | `--record-durations=FILE` | | Write each file's duration to `FILE` (directories created). |
 | `--coverage=DIR` | | Trace the run, write `DIR/covered.tsv`, print `🧭 Coverage: covered=… coverable=… pct=…`. See [Coverage](coverage.md). |
 | `--report=FORMAT` | | Also write `test_report.FORMAT` in the current directory: `markdown`, `json` or `junit`. |
+| `--filter=TEXT` | | Only the cases whose description contains `TEXT` (sets `BASHX_FILTER`). Files without a match report 0 cases. |
+| `-v`, `--verbose` | | Show what passing cases print too (sets `BASHX_VERBOSE`). By default a case's output shows only when it fails or is skipped. |
 | `-h`, `--help` | | Print the help. |
 
 Options use the `--name=value` form (no space).
@@ -204,9 +206,11 @@ Also `bashx --version` and `bashx -v`.
 | `BASHX_PLAIN_OUTPUT` | `bashx test` | Any value: no live status line, even in a terminal. |
 | `CI` | `bashx test` | Any value: same as `BASHX_PLAIN_OUTPUT`. Set by most CI systems. |
 | `NO_COLOR` | test files, `bashx test` | Any value: no colours ([no-color.org](https://no-color.org)). |
+| `BASHX_FILTER` | test files | Run only the cases whose description contains it. Set by `--filter`; works with `bash x.test.sh` too. |
+| `BASHX_VERBOSE` | test files | Any value: show what passing cases print. Set by `-v`. |
 | `TMPDIR` | everything | Where temporary directories are created (default `/tmp`). |
 | `BASHX_LIB` | test files | Set by `bashx`; read by test files to find `bashx.sh`. |
-| `BASHX_RESULT_FILE` | test files | Set by the runner for each file: where `test::summary` writes the counts. |
+| `BASHX_RESULT_FILE` | test files | Set by the runner for each file: where `test::main` (`test::summary`) writes the counts. |
 | `BASHX_COVERAGE_TRACE_DIR` | traced processes | Set by `bashx test --coverage`: where each bash process writes its trace. |
 
 The last three are set by bashx itself; see [How it works](how-it-works.md).

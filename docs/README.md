@@ -13,7 +13,7 @@ the tests would notice a bug (mutation testing). Everything is bash.
 
 | Page | Read it to |
 | --- | --- |
-| [Writing tests](writing-tests.md) | structure a test file, isolate cases, use fixtures and mocks, test exit codes and scripts, avoid bash pitfalls |
+| [Writing tests](writing-tests.md) | structure a test file, isolate cases, use tables, hooks, fixtures and mocks, test exit codes and scripts, avoid bash pitfalls |
 | [Running tests](running-tests.md) | understand what `bashx test` does: discovery, parallelism, deadlines, skipping, kinds |
 | [Coverage](coverage.md) | measure line coverage, find untested lines, merge runs |
 | [Mutation testing](mutation-testing.md) | find what the tests do not check, read survivors, mark equivalent mutants |
@@ -24,7 +24,7 @@ the tests would notice a bug (mutation testing). Everything is bash.
 | Page | Contains |
 | --- | --- |
 | [Command line](cli.md) | every command, option, environment variable, output file and exit code |
-| [API](api.md) | every `test::` function, with an example |
+| [API](api.md) | every function and `assert` operator, with an example |
 | [How it works](how-it-works.md) | the runner's protocol, isolation, tracing, sandboxes; writing tests without the API |
 | [Troubleshooting](troubleshooting.md) | error messages and their fixes |
 | [Contributing](../CONTRIBUTING.md) | checks, commit messages, how releases are made |

@@ -11,69 +11,116 @@ source "${BASHX_LIB:-$(bashx lib)}/bashx.sh"
 Sourcing it also:
 
 - turns on `set -euo pipefail` in the test file;
-- sets an EXIT trap that removes the file's temporary directory and makes the
-  file exit 1 when a case failed ([details](writing-tests.md#the-exit-trap)).
+- sets an EXIT trap that removes the file's temporary directory, makes the
+  file exit 1 when a case failed, and fails a file whose `test_*` functions
+  never ran ([details](writing-tests.md#the-exit-trap)).
 
-| Lifecycle | Assertions | Fixtures |
+| Cases | Checks | Fixtures |
 | --- | --- | --- |
-| [`test::init`](#testinit) | [`test::assert_equals`](#testassert_equals) | [`test::tmp_dir`](#testtmp_dir) |
-| [`test::run`](#testrun) | [`test::assert_not_equals`](#testassert_not_equals) | [`test::suite_tmp_dir`](#testsuite_tmp_dir) |
-| [`test::skip`](#testskip) | [`test::assert_contains`](#testassert_contains) | [`test::mock_command`](#testmock_command) |
-| [`test::summary`](#testsummary) | [`test::assert_not_contains`](#testassert_not_contains) | |
-| | [`test::assert_matches`](#testassert_matches) | |
-| | [`test::assert_exit_code`](#testassert_exit_code) | |
-| | [`test::assert_file_exists`](#testassert_file_exists) | |
-| | [`test::assert_file_not_exists`](#testassert_file_not_exists) | |
-| | [`test::assert_file_contains`](#testassert_file_contains) | |
-| | [`test::assert_file_not_contains`](#testassert_file_not_contains) | |
-| | [`test::assert_file_equals`](#testassert_file_equals) | |
+| [`test_*` functions](#test_-functions) | [`assert`](#assert) | [`mock`](#mock) |
+| [`test::main`](#testmain) | [`capture`](#capture) | [`mock::calls`, `mock::count`](#mockcalls-mockcount) |
+| [`test::cases`](#testcases) | [v1 assertions](#v1-assertions) | [`test::tmp_dir`](#testtmp_dir) |
+| [`before_each`, `after_each`, `before_all`](#hooks) | | [`test::suite_tmp_dir`](#testsuite_tmp_dir) |
+| [`test::skip`](#testskip) | | [`test::mock_command`](#testmock_command) |
+| [`test::run`, `test::init`, `test::summary`](#testrun) | | |
 
 ---
 
-## Lifecycle
+## Cases
 
-### test::init
+### test_* functions
 
-```text
-test::init
+```bash
+test_should_keep_the_last_three_archives() {
+  ...
+}
 ```
 
-Starts the test file: resets the counters, creates the file's shared
-temporary directory, prints the file name relative to the git root:
+Every function whose name starts with `test_` is a case. Its description is
+its name without `test_`, underscores turned into spaces: `should keep the
+last three archives`. [`test::main`](#testmain) runs them in the order they
+are defined in the file.
 
-```text
-🧪 ./lib/strings.test.sh
-```
-
-Call it once, after defining the cases and before the first `test::run`.
-
-### test::run
-
-```text
-test::run "<description>" <function> [args...]
-```
-
-Runs one case: calls `<function>` with the arguments, in a subshell, with
-errexit on and its own temporary directory. Prints one line:
+Each case runs in a subshell, with errexit on, stdin closed, and its own
+temporary directory and `bin/` directory (first on `PATH`). What it prints
+is shown under it only when it fails or is skipped (always with
+`bashx test -v` or `BASHX_VERBOSE=1`).
 
 ```text
 │  ✓ should keep a short text (7ms)
 │  ✗ should cut a long text (6ms)
+│    ✗ strings.test.sh:10  assert "$(strings::truncate "hello world" 6)" == "hello w…"
+│      expected: hello w…
+│      actual:   hello…
 │  ○ should talk to docker (skipped)
+│    skipped: docker not installed
 ```
 
-The duration turns yellow from 300 ms and red from 1.2 s. `test::run` always
-returns 0, so the next case runs whatever happened.
+The duration turns yellow from 300 ms and red from 1.2 s.
 
-The arguments make table-driven cases easy:
+### test::main
+
+```text
+test::main
+```
+
+Runs every `test_*` function not run yet, in the order of the file (once per
+row for those with a [table](#testcases)), then prints the file's result and
+returns 1 when a case failed. Make it the last line of the file.
+
+```text
+└── ✓ All 3 tests passed (24ms)
+└── ✓ All 3 tests passed / Skipped: 1 (24ms)
+└── ✗ Failed: 1 / Passed: 2 / Total: 3 (30ms)
+```
+
+Forgotten, the file fails anyway, with
+`✗ 2 test_* function(s) never ran: end the file with test::main`.
+
+### test::cases
+
+```text
+test::cases <function> <<'EOF'
+<arguments of row 1>
+<arguments of row 2>
+EOF
+```
+
+Gives a case a table: `test::main` runs it once per row, with the row's
+words as arguments. Words follow shell quoting (`"hello world"` is one word,
+`""` an empty one). Blank lines and lines starting with `#` are skipped. The
+description of each run ends with its arguments:
+`should truncate [hello world 6 hello…]`.
 
 ```bash
-check_truncate() {
-  test::assert_equals "$3" "$(strings::truncate "$1" "$2")"
+test_should_truncate() {
+  assert "$(strings::truncate "$1" "$2")" == "$3"
 }
+test::cases test_should_truncate <<'EOF'
+hello          10  hello
+"hello world"  6   hello…
+# a cut at the boundary
+hello          5   hello
+EOF
+```
 
-test::run "should keep a short text" check_truncate "hello" 10 "hello"
-test::run "should cut a long text" check_truncate "hello world" 6 "hello…"
+### Hooks
+
+```bash
+before_all()  { ...; }   # once, in the file's shell, before the first case
+before_each() { ...; }   # in each case's subshell, before the case
+after_each()  { ...; }   # in each case's subshell, after it, even when it failed
+```
+
+Define any of them in the test file and they are called. What `before_each`
+sets (variables, `cd`, mocks) is seen by the case and gone after it.
+
+```bash
+before_each() {
+  WORK="$(test::tmp_dir)"
+  cp -r "${FIXTURES}/project" "${WORK}"
+  cd "${WORK}/project"
+}
 ```
 
 ### test::skip
@@ -94,183 +141,206 @@ test_should_build_the_image() {
 
 To skip a whole file, use [`# @requires`](running-tests.md#skipping-files).
 
-### test::summary
+### test::run
 
 ```text
+test::run "<description>" <function> [args...]
+test::init
 test::summary
 ```
 
-Prints the file's result and returns 1 when a case failed. Make it the last
-command of the file: its status becomes the file's exit code.
+The pieces `test::main` is made of, for a description of your own or a file
+written for bashx 0.1:
 
-```text
-└── ✓ All 3 tests passed (24ms)
-└── ✓ All 3 tests passed / Skipped: 1 (24ms)
-└── ✗ Failed: 1 / Passed: 2 / Total: 3 (30ms)
+- `test::run` runs one case now. A function run this way is not run again
+  by `test::main`. It always returns 0, so the next case runs whatever
+  happened.
+- `test::init` prints the file name and calls `before_all`. The first
+  `test::run` calls it when you do not.
+- `test::summary` prints the result and returns 1 when a case failed.
+
+```bash
+test::run "should cut at a multi-byte boundary" check_truncate "héllo" 2 "h…"
+test::main
 ```
 
-Forgotten, the EXIT trap prints it anyway and the file still fails when a case
-failed.
+With `BASHX_FILTER` set (`bashx test --filter=TEXT`), `test::run` runs only
+the cases whose description contains it.
 
 ---
 
-## Assertions
+## Checks
 
-All assertions:
-
-- return 0 when they hold;
-- otherwise print `✗ Assertion failed` with what was expected and what was
-  found, and return 1, which ends the case (errexit);
-- take an optional last argument, `[message]`, printed with the failure as
-  `Message: …`.
+### assert
 
 ```text
-    ✗ Assertion failed
-      Expected: 3
-      Actual:   4
-      Message:  files left after pruning
+assert <actual> <operator> [<expected>]
 ```
 
-### test::assert_equals
+Checks one thing, in the same order every time. On failure it prints the
+line, the values, and ends the case: under `if`, `||`, `&&`, `!`, and inside
+a `$( )` too (a helper that asserts fails the case wherever it is called).
 
-```text
-test::assert_equals <expected> <actual> [message]
-```
-
-The two strings are equal. Compare whole outputs, lists joined on spaces or
-newlines, exit codes captured in a variable.
+| Operator | Holds when |
+| --- | --- |
+| `==` / `!=` | the strings are equal / differ |
+| `contains` / `!contains` | `<expected>` appears / does not appear in `<actual>` |
+| `matches` | `<actual>` matches the extended regex (`[[ =~ ]]`; quote it in single quotes) |
+| `starts_with` / `ends_with` | `<actual>` starts / ends with `<expected>` |
+| `empty` / `!empty` | `<actual>` is empty / not empty (no `<expected>`) |
+| `-eq` `-ne` `-lt` `-le` `-gt` `-ge` | integer comparison; fails on a non-integer |
+| `is_file` / `is_dir` | `<actual>` is a regular file / a directory |
+| `exists` / `!exists` | something / nothing exists at `<actual>` |
+| `has` / `!has` | the file `<actual>` contains / does not contain `<expected>` |
+| `same_as` | the file `<actual>` holds exactly `<expected>`, or the content of the file `<expected>` names (a "golden" file) |
 
 ```bash
-test::assert_equals "hello…" "$(strings::truncate "hello world" 6)"
-test::assert_equals $'line 1\nline 2' "$(my_command)"
+assert "$(strings::truncate "hello world" 6)" == "hello…"
+assert "${out}" contains "3 files saved"
+assert "${out}" !contains "password"
+assert "$(bashx version)" matches '^bashx [0-9]+\.[0-9]+\.[0-9]+$'
+assert "$(wc -l <"${log}")" -ge 3
+assert "${dir}/cache" !exists
+assert "${dir}/app.conf" has "port=8080"
+assert "${dir}/report.md" same_as "$(dirname "${BASH_SOURCE[0]}")/fixtures/report.md"
 ```
 
-### test::assert_not_equals
+A failure, from a helper, with a multi-line value:
 
 ```text
-test::assert_not_equals <unexpected> <actual> [message]
+│    ✗ backup.test.sh:12  assert "$(ls "${dir}")" == "${expected}"
+│      called from backup.test.sh:20 (test_should_prune_old_archives)
+│      diff (- expected, + actual):
+│      @@ -1,3 +1,3 @@
+│       3.tar
+│      -4.tar
+│      +1.tar
+│       5.tar
 ```
 
-The two strings differ.
+`assert` takes no message, and refuses extra arguments (a message left from
+a v1 assertion fails with `assert: too many arguments`). The failure already
+prints the source line, so a trailing comment shows with it; a value worth
+seeing goes in an `echo` before, which shows only when the case fails:
 
 ```bash
-test::assert_not_equals "$(uuid::new)" "$(uuid::new)"
+for opt in --jobs=0 --timeout=x; do
+  capture bashx test "${opt}"
+  echo "option: ${opt}"
+  assert "${STATUS}" == 2    # bad options exit 2
+done
 ```
 
-### test::assert_contains
+`test::assert` is the same function, for a file whose code under test
+defines its own `assert`.
+
+### capture
 
 ```text
-test::assert_contains <haystack> <needle> [message]
+capture <command> [args...]
 ```
 
-`needle` appears in `haystack`. Use it for long outputs where only one part
-matters.
+Runs the command in a subshell, stdin closed, without stopping the case, and
+sets:
+
+| Variable | Holds |
+| --- | --- |
+| `STATUS` | its exit code |
+| `STDOUT` | what it printed on stdout |
+| `STDERR` | what it printed on stderr |
+
+Trailing newlines are dropped, as with `$( )`. What the command changes
+(variables, `cd`) stays in its subshell; an `exit` in it ends only the
+subshell.
 
 ```bash
-test::assert_contains "$(backup::run 2>&1)" "3 files saved"
+capture backup::run /nope
+assert "${STATUS}" == 1
+assert "${STDERR}" contains "no such file: /nope"
+assert "${STDOUT}" empty
 ```
 
-### test::assert_not_contains
+The names are in capitals on purpose: shellcheck does not report them as
+never assigned. `test::capture` is the same function.
 
-```text
-test::assert_not_contains <haystack> <needle> [message]
-```
+### v1 assertions
 
-`needle` does not appear in `haystack`.
+The assertions of bashx 0.1 are still there and unchanged. Unlike `assert`,
+they return 1 and rely on errexit to end the case, so they do nothing under
+`if` or `||`, and take an optional last `[message]`.
 
-```bash
-test::assert_not_contains "$(deploy::log)" "password"
-```
-
-### test::assert_matches
-
-```text
-test::assert_matches <string> <regex> [message]
-```
-
-`string` matches the extended regular expression (bash `[[ =~ ]]`). Quote the
-regex in single quotes.
-
-```bash
-test::assert_matches "$(bashx version)" '^bashx [0-9]+\.[0-9]+\.[0-9]+$'
-```
-
-### test::assert_exit_code
-
-```text
-test::assert_exit_code <code> <command> [args...]
-```
-
-Runs the command, discards its output, and checks its exit code. The command
-can be a function. The `[message]` argument is not available here: the
-arguments after `<code>` are the command.
-
-```bash
-test::assert_exit_code 0 config::valid "port=80"
-test::assert_exit_code 2 config::valid "port=eighty"
-```
-
-To check the output too, capture both instead (see
-[testing exit codes](writing-tests.md#testing-exit-codes-and-errors)).
-
-### test::assert_file_exists
-
-```text
-test::assert_file_exists <file> [message]
-```
-
-`file` exists and is a regular file.
-
-### test::assert_file_not_exists
-
-```text
-test::assert_file_not_exists <path> [message]
-```
-
-Nothing exists at `path` (no file, directory or link).
-
-```bash
-cleanup::run "${dir}"
-test::assert_file_not_exists "${dir}/cache"
-```
-
-### test::assert_file_contains
-
-```text
-test::assert_file_contains <file> <needle> [message]
-```
-
-The file exists and contains `needle`.
-
-```bash
-test::assert_file_contains "${dir}/app.conf" "port=8080"
-```
-
-### test::assert_file_not_contains
-
-```text
-test::assert_file_not_contains <file> <needle> [message]
-```
-
-The file exists and does not contain `needle`.
-
-### test::assert_file_equals
-
-```text
-test::assert_file_equals <file> <expected> [message]
-```
-
-The file's whole content equals `expected`. When `expected` names an existing
-file, its content is the expected value (a "golden" file).
-
-```bash
-test::assert_file_equals "${dir}/out.txt" "done"
-test::assert_file_equals "${dir}/report.md" "$(dirname "${BASH_SOURCE[0]}")/fixtures/report.md"
-```
+| v1 | With `assert` |
+| --- | --- |
+| `test::assert_equals <expected> <actual>` | `assert <actual> == <expected>` |
+| `test::assert_not_equals <unexpected> <actual>` | `assert <actual> != <unexpected>` |
+| `test::assert_contains <haystack> <needle>` | `assert <haystack> contains <needle>` |
+| `test::assert_not_contains <haystack> <needle>` | `assert <haystack> !contains <needle>` |
+| `test::assert_matches <string> <regex>` | `assert <string> matches <regex>` |
+| `test::assert_exit_code <code> <command>…` | `capture <command>…; assert "${STATUS}" == <code>` |
+| `test::assert_file_exists <file>` | `assert <file> is_file` |
+| `test::assert_file_not_exists <path>` | `assert <path> !exists` |
+| `test::assert_file_contains <file> <needle>` | `assert <file> has <needle>` |
+| `test::assert_file_not_contains <file> <needle>` | `assert <file> !has <needle>` |
+| `test::assert_file_equals <file> <expected>` | `assert <file> same_as <expected>` |
 
 ---
 
 ## Fixtures
+
+### mock
+
+```text
+mock <name> [--exit <code>] [--stdout <text>] [--stderr <text>]
+mock <name> <<'EOF'
+<bash body; "$@" are the arguments>
+EOF
+```
+
+Replaces the command or function `<name>` until the end of the case, and
+records every call. The replacement is two things that write to the same
+call log:
+
+- a function `<name>`, for calls from the test's shell: it takes precedence
+  over `PATH`, so it also replaces a function of the code under test;
+- an executable in the case's `bin/`, first on `PATH`, for calls from child
+  processes (`bash script.sh`, `xargs`, `env`…).
+
+Without options, the mock prints nothing and succeeds. The options print
+`<text>` and exit with `<code>`; a body on stdin runs after them.
+
+```bash
+test_should_retry_when_the_api_is_down() {
+  mock curl --exit 7
+  mock sleep
+  api::fetch_with_retry 3 || true
+  assert "$(mock::count curl)" == 3
+}
+
+test_should_read_the_commit() {
+  mock git <<'EOF'
+[[ "$1" == rev-parse ]] && echo abc123
+EOF
+  assert "$(release::version)" == "0.1.0+abc123"
+}
+```
+
+Outside a case, `mock` fails with `mock: works inside a case only`.
+`test::mock` is the same function.
+
+### mock::calls, mock::count
+
+```text
+mock::calls <name>
+mock::count <name>
+```
+
+`mock::calls` prints the arguments of every call of a mock, one call per
+line (`"$*"`). `mock::count` prints how many calls there were.
+
+```bash
+deploy::notify "done"
+assert "$(mock::calls curl)" contains "--data done"
+```
 
 ### test::tmp_dir
 
@@ -287,7 +357,7 @@ test_should_write_the_config() {
   local dir
   dir="$(test::tmp_dir)"
   config::write "${dir}/app.conf" port=80
-  test::assert_file_contains "${dir}/app.conf" "port=80"
+  assert "${dir}/app.conf" has "port=80"
 }
 ```
 
@@ -300,13 +370,13 @@ test::suite_tmp_dir
 Prints the file's shared temporary directory: the same path for every case,
 removed when the file exits. Use it for fixtures that are slow to build and
 only read. Fails with `test::suite_tmp_dir needs test::init first` before
-`test::init`.
+the first case or `before_all`.
 
 ```bash
-test::init
-FIXTURE="$(test::suite_tmp_dir)/big-tree"
-build_big_tree "${FIXTURE}"          # once, for every case
-test::run "should count the files" test_should_count_the_files
+before_all() {
+  FIXTURE="$(test::suite_tmp_dir)/big-tree"
+  build_big_tree "${FIXTURE}"          # once, for every case
+}
 ```
 
 ### test::mock_command
@@ -315,23 +385,9 @@ test::run "should count the files" test_should_count_the_files
 test::mock_command <name> <script> [<bin dir>]
 ```
 
-Writes an executable `<name>` that runs `<script>` (bash) into a directory,
-and prints that directory. Put it first on `PATH` inside a case to replace a
-real command. Pass the same `<bin dir>` to group several mocks.
-
-```bash
-test_should_retry_when_the_api_is_down() {
-  local bin calls
-  calls="$(test::tmp_dir)/calls"
-  bin="$(test::mock_command curl "echo x >>'${calls}'; exit 7")"
-  test::mock_command sleep ':' "${bin}" >/dev/null
-  PATH="${bin}:${PATH}"
-  api::fetch_with_retry 3 || true
-  test::assert_equals 3 "$(wc -l <"${calls}")"
-}
-```
-
-The `PATH` change ends with the case.
+The bashx 0.1 way to mock: writes an executable `<name>` that runs
+`<script>` into a directory and prints the directory, to put first on `PATH`
+yourself. It records nothing; prefer [`mock`](#mock).
 
 ---
 
@@ -340,7 +396,10 @@ The `PATH` change ends with the case.
 | Variable | Set by | Meaning |
 | --- | --- | --- |
 | `BASHX_LIB` | `bashx`, or `bashx.sh` itself | Directory of `bashx.sh`. |
+| `BASHX_FILTER` | you, or `bashx test --filter` | Run only the cases whose description contains it. |
+| `BASHX_VERBOSE` | you, or `bashx test -v` | Any value: show what passing cases print. |
 | `NO_COLOR` | you | Any value: no colours. Read when `bashx.sh` is sourced. |
+| `STATUS`, `STDOUT`, `STDERR` | `capture` | What the last captured command did. |
 
 Names starting with `test::_` or `_TEST_` are internal: do not use them.
 

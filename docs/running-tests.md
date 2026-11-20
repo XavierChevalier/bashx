@@ -6,7 +6,10 @@
 bashx test                 # every *.test.sh under the git root (or the current dir)
 bashx test tests/          # under another root
 bashx test --kind=unit     # only *.unit.test.sh
+bashx test --filter=retry  # only the cases whose description contains "retry"
+bashx test -v              # also show what passing cases print
 bash path/to/x.test.sh     # one file, without the runner
+BASHX_FILTER=retry bash path/to/x.test.sh
 ```
 
 ## What the runner does
@@ -50,6 +53,8 @@ Every option, with its exact syntax and exit codes, is in the
 | `--record-durations=FILE` | | Write each file's duration (`seconds<TAB>path`). |
 | `--coverage=DIR` | | Measure line coverage: see [Coverage](coverage.md). |
 | `--report=FORMAT` | | Also write `test_report.markdown`, `.json` or `.junit` in the current directory. |
+| `--filter=TEXT` | | Only the cases whose description contains `TEXT`. |
+| `-v`, `--verbose` | | Show what passing cases print; by default a case's output shows only when it fails or is skipped. |
 
 ## Isolation
 

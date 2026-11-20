@@ -118,7 +118,7 @@ bashx's own example:
 ```console
 $ bashx test ~/.bashx/examples/calculator
 ...
-📊 Test Summary: 5 passed, 0 failed, 5 total (111ms)
+📊 Test Summary: 7 passed, 0 failed, 7 total (111ms)
 ```
 
 ## How test files find bashx
