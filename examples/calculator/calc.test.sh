@@ -4,38 +4,38 @@ source "${BASHX_LIB:-$(bashx lib)}/bashx.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/calc.sh"
 
 test_should_add_two_integers() {
-  test::assert_equals 5 "$(calc::add 2 3)"
-  test::assert_equals -1 "$(calc::add 2 -3)"
+  assert "$(calc::add 2 3)" == 5
+  assert "$(calc::add 2 -3)" == -1
 }
 
 test_should_divide_towards_zero() {
-  test::assert_equals 3 "$(calc::divide 7 2)"
-  test::assert_equals -3 "$(calc::divide -7 2)"
+  assert "$(calc::divide 7 2)" == 3
+  assert "$(calc::divide -7 2)" == -3
 }
 
 test_should_refuse_a_division_by_zero() {
-  local err rc=0
-  err="$(calc::divide 1 0 2>&1)" || rc=$?
-  test::assert_equals 1 "${rc}"
-  test::assert_equals "calc: division by zero" "${err}"
+  capture calc::divide 1 0
+  assert "${STATUS}" == 1
+  assert "${STDERR}" == "calc: division by zero"
+  assert "${STDOUT}" empty
 }
 
 test_should_tell_the_sign_of_a_number() {
-  test::assert_equals negative "$(calc::sign -4)"
-  test::assert_equals zero "$(calc::sign 0)"
-  test::assert_equals positive "$(calc::sign 9)"
+  assert "$(calc::sign "$1")" == "$2"
 }
+test::cases test_should_tell_the_sign_of_a_number <<'EOF'
+-4  negative
+0   zero
+9   positive
+EOF
 
 test_should_refuse_what_is_not_an_integer() {
-  test::assert_exit_code 2 calc::add 1 x
-  test::assert_exit_code 2 calc::divide 1.5 2
-  test::assert_exit_code 2 calc::sign ""
+  capture calc::add 1 x
+  assert "${STATUS}" == 2
+  capture calc::divide 1.5 2
+  assert "${STATUS}" == 2
+  capture calc::sign ""
+  assert "${STATUS}" == 2
 }
 
-test::init
-test::run "should add two integers" test_should_add_two_integers
-test::run "should divide towards zero" test_should_divide_towards_zero
-test::run "should refuse a division by zero" test_should_refuse_a_division_by_zero
-test::run "should tell the sign of a number" test_should_tell_the_sign_of_a_number
-test::run "should refuse what is not an integer" test_should_refuse_what_is_not_an_integer
-test::summary
+test::main

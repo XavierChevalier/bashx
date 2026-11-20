@@ -28,9 +28,13 @@ and `.bashx` are ignored, and so are nested git repositories: a directory
 with its own `.git` (a submodule, a clone) is a separate project. Run
 `bashx test <that directory>` to test it.
 
-**A case fails with no "Assertion failed" message**
+**`✗ N test_* function(s) never ran: end the file with test::main`**
+The file defines cases but never runs them: add `test::main` as its last
+line. (`test::run` lines for every case work too.)
+
+**A case fails with no assertion message**
 A command failed before any assertion, and errexit ended the case. Its error
-went to stderr, which is shown with the case: look just above the `✗` line.
+went to stderr, which is shown under the case's `✗` line.
 Typical causes: an unset variable (`set -u`), `((n++))` with `n=0`, a
 `grep` that found nothing.
 
@@ -45,6 +49,10 @@ The file ran past its deadline. Either a test waits for something that never
 comes (stdin is closed: a `read` gets end of file; a server that never
 answers…), or the file is just slow: raise the deadline with
 `--timeout=300` or `BASHX_TIMEOUT=300`.
+
+**A passing case printed something, and it does not show**
+The output of a case is shown only when it fails or is skipped. Run with
+`bashx test -v` (or `BASHX_VERBOSE=1 bash x.test.sh`) to see it always.
 
 **The file passes alone but fails under `bashx test`**
 Under the runner the file starts from its own directory, has no stdin, and

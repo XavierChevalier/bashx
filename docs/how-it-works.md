@@ -22,13 +22,23 @@ only sets `BASHX_LIB` and calls them.
 
 ## A case
 
-`test::run` runs the case function in a subshell:
+`test::main` lists the file's functions with `declare -F`, keeps the
+`test_*` ones, sorts them by the line they are defined on (`shopt -s
+extdebug` gives it), and hands each one to `test::run`, which runs it in a
+subshell:
 
 ```bash
 set +e
-( set -e; "$@" )   # the case
+(
+  set -e
+  PATH="<case dir>/.bin:${PATH}"          # where mock puts its executables
+  trap after_each EXIT                     # when after_each exists
+  before_each                              # when it exists
+  "$@"                                     # the case
+) >"<case dir>/.log" 2>&1 </dev/null
 status=$?
 set -e
+[[ ! -e "<case dir>/.failed" ]] || status=1
 ```
 
 - The subshell is why nothing a case changes reaches the next one.
@@ -36,7 +46,18 @@ set -e
   first failure ends the case. (Bash turns errexit off in the whole left side
   of `||` and `&&`, including the functions it calls: a `( … ) || failed=1`
   would ignore failures.)
+- A failed `assert` does not rely on errexit: it creates `.failed` and exits.
+  Under `if` or `||` it still ends the case; in a `$( )` it only leaves the
+  substitution, but `.failed` marks the case failed anyway.
+- The log is printed under the case when it fails or is skipped, or always
+  with `BASHX_VERBOSE`.
 - Exit status 77 means skipped (`test::skip` exits with it).
+
+The cases run from `test::main`, not from the EXIT trap, although the trap
+would save a line: on bash 5.0, a `return` without argument in any function
+called under a trap returns the status from before the trap, which changes
+what the code under test does (`check || return` would return 0). The trap
+only fails a file whose `test_*` functions never ran.
 
 ## The runner protocol
 

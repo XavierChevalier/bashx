@@ -6,8 +6,10 @@
 
 Tests, coverage and mutation testing for bash, in bash.
 
-- **Write tests** as plain bash functions, with assertions, mocks and temp dirs.
-  Every case runs isolated: errexit on, its own subshell, its own tmp dir.
+- **Write tests** as plain bash functions: `assert "$(add 2 3)" == 5`, a
+  command's status and outputs with `capture`, mocks that record their calls,
+  tables of cases, temp dirs. Every case runs isolated: errexit on, its own
+  subshell, its own tmp dir. A failure names its line and shows a diff.
 - **Run them** in parallel with `bashx test`: per-file deadlines, no leaked
   processes, CI shards, Markdown / JSON / JUnit reports.
 - **Measure line coverage** with `bashx test --coverage=DIR`, and list the
@@ -17,7 +19,7 @@ Tests, coverage and mutation testing for bash, in bash.
   and tells you which changes no test notices.
 
 No dependency beyond bash ≥ 5 and the usual coreutils. bashx tests itself:
-83 cases, 90 % line coverage.
+102 cases, 91 % line coverage.
 
 ## Install
 
@@ -55,14 +57,15 @@ source "${BASHX_LIB:-$(bashx lib)}/bashx.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/calc.sh"
 
 test_should_add_two_integers() {
-  test::assert_equals 5 "$(calc::add 2 3)"
-  test::assert_equals -1 "$(calc::add 2 -3)"
+  assert "$(calc::add 2 3)" == 5
+  assert "$(calc::add 2 -3)" == -1
 }
 
-test::init
-test::run "should add two integers" test_should_add_two_integers
-test::summary
+test::main
 ```
+
+Every `test_*` function is a case, named after the function; `test::main`
+runs them all.
 
 Run every `*.test.sh` of the project:
 
@@ -79,14 +82,14 @@ A test file is also a plain script: `bash calc.test.sh` runs it alone.
 
 ## A full example
 
-[`examples/calculator`](examples/calculator) holds a small library with five
+[`examples/calculator`](examples/calculator) holds a small library with seven
 cases. From there:
 
 ```console
 $ bashx test --coverage=/tmp/cov examples/calculator
 ...
 🧭 Coverage: covered=18 coverable=18 pct=100.0
-📊 Test Summary: 5 passed, 0 failed, 5 total (111ms)
+📊 Test Summary: 7 passed, 0 failed, 7 total (111ms)
 ```
 
 Every line runs. Are the tests checking what those lines do?
@@ -110,7 +113,8 @@ code of a bad input, never what the user is told. One assertion kills it:
 
 ```bash
 test_should_name_the_bad_input() {
-  test::assert_equals "calc: not an integer: 'x'" "$(calc::add 1 x 2>&1)"
+  capture calc::add 1 x
+  assert "${STDERR}" == "calc: not an integer: 'x'"
 }
 ```
 
@@ -127,7 +131,7 @@ in the **[documentation index](docs/README.md)**:
 | Guides | Reference |
 | --- | --- |
 | [Installation](docs/installation.md) | [Command line](docs/cli.md): every command, option, variable, exit code |
-| [Writing tests](docs/writing-tests.md) | [API](docs/api.md): every `test::` function |
+| [Writing tests](docs/writing-tests.md) | [API](docs/api.md): every function and operator |
 | [Running tests](docs/running-tests.md) | [How it works](docs/how-it-works.md) |
 | [Coverage](docs/coverage.md) | [Troubleshooting](docs/troubleshooting.md) |
 | [Mutation testing](docs/mutation-testing.md) | [Changelog](CHANGELOG.md) |

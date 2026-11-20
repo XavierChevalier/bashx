@@ -39,17 +39,18 @@ source "${BASHX_LIB:-$(bashx lib)}/bashx.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/strings.sh"
 
 test_should_keep_a_short_text() {
-  test::assert_equals "hello" "$(strings::truncate "hello" 10)"
+  assert "$(strings::truncate "hello" 10)" == "hello"
 }
 
-test::init
-test::run "should keep a short text" test_should_keep_a_short_text
-test::summary
+test::main
 ```
 
 - Line 2 loads the test API. Line 3 loads the code under test.
-- A case is a function. `test::run` runs it with a description.
-- `test::summary` prints the result and makes the file fail if a case failed.
+- A case is a function whose name starts with `test_`. Its name is its
+  description: `should keep a short text`.
+- `assert <actual> <operator> <expected>` checks one thing.
+- `test::main`, the last line, runs every `test_*` function in order, prints
+  the result and makes the file fail if a case failed.
 
 ## 3. Run it
 
@@ -67,29 +68,23 @@ file also runs alone: `bash strings.test.sh`.
 
 ## 4. A failing test
 
-Add a second case, with a wrong expectation on purpose:
+Add a second case before `test::main`, with a wrong expectation on purpose:
 
 ```bash
 test_should_cut_a_long_text() {
-  test::assert_equals "hello w…" "$(strings::truncate "hello world" 6)"
+  assert "$(strings::truncate "hello world" 6)" == "hello w…"
 }
-```
-
-and register it before `test::summary`:
-
-```bash
-test::run "should cut a long text" test_should_cut_a_long_text
 ```
 
 ```console
 $ bashx test
 🧪 ./strings.test.sh
-│  ✓ should keep a short text (7ms)
-    ✗ Assertion failed
-      Expected: hello w…
-      Actual:   hello…
-│  ✗ should cut a long text (6ms)
-└── ✗ Failed: 1 / Passed: 1 / Total: 2 (23ms)
+│  ✓ should keep a short text (5ms)
+│  ✗ should cut a long text (9ms)
+│    ✗ strings.test.sh:10  assert "$(strings::truncate "hello world" 6)" == "hello w…"
+│      expected: hello w…
+│      actual:   hello…
+└── ✗ Failed: 1 / Passed: 1 / Total: 2 (32ms)
 
 📊 Test Summary: 1 passed, 1 failed, 2 total (113ms)
 
@@ -99,7 +94,8 @@ $ echo $?
 1
 ```
 
-The function is right: 6 characters is 5 letters and `…`. Fix the expectation
+The failure names the line and shows both values. The function is right:
+6 characters is 5 letters and `…`. Fix the expectation
 to `"hello…"`, and the suite passes again.
 
 ## 5. Coverage: which lines ran?
@@ -151,7 +147,7 @@ and no test notices: the boundary is not tested. Add it:
 
 ```bash
 test_should_keep_a_text_of_exactly_the_maximum() {
-  test::assert_equals "hello" "$(strings::truncate "hello" 5)"
+  assert "$(strings::truncate "hello" 5)" == "hello"
 }
 ```
 
@@ -174,28 +170,40 @@ source "${BASHX_LIB:-$(bashx lib)}/bashx.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/strings.sh"
 
 test_should_keep_a_short_text() {
-  test::assert_equals "hello" "$(strings::truncate "hello" 10)"
+  assert "$(strings::truncate "hello" 10)" == "hello"
 }
 
 test_should_keep_a_text_of_exactly_the_maximum() {
-  test::assert_equals "hello" "$(strings::truncate "hello" 5)"
+  assert "$(strings::truncate "hello" 5)" == "hello"
 }
 
 test_should_cut_a_long_text() {
-  test::assert_equals "hello…" "$(strings::truncate "hello world" 6)"
+  assert "$(strings::truncate "hello world" 6)" == "hello…"
 }
 
-test::init
-test::run "should keep a short text" test_should_keep_a_short_text
-test::run "should keep a text of exactly the maximum" test_should_keep_a_text_of_exactly_the_maximum
-test::run "should cut a long text" test_should_cut_a_long_text
-test::summary
+test::main
+```
+
+The same cases as a table, one row each:
+
+```bash
+test_should_truncate() {
+  assert "$(strings::truncate "$1" "$2")" == "$3"
+}
+test::cases test_should_truncate <<'EOF'
+hello          10  hello
+hello          5   hello
+"hello world"  6   hello…
+EOF
+
+test::main
 ```
 
 ## Where to go next
 
-- [Writing tests](writing-tests.md): fixtures, mocks, exit codes, testing whole scripts.
-- [API](api.md): every assertion.
+- [Writing tests](writing-tests.md): exit codes and errors, mocks, hooks,
+  fixtures, testing whole scripts.
+- [API](api.md): every operator and function.
 - [Command line](cli.md): every option of `test`, `coverage` and `mutate`.
 - [CI](ci.md): run this on every push.
 
