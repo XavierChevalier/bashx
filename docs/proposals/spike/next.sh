@@ -130,10 +130,12 @@ test::cases() {
 # shellcheck disable=SC2034 # read by the test file
 capture() {
   local -r dir="$(mktemp -d "${_TEST_TMP:-${TMPDIR:-/tmp}}/capture.XXXXXX")"
-  # The form the v1 tests use: `( "$@" ); STATUS=$?` under set +e read 0
-  # for a failed `cmd || return` on bash 5.0 in CI.
+  # bash 5.0 (CI) reads 0 for a function ending in a failed `cmd || return`
+  # when it is the whole of a ( ) or $( ). Inside an || list, as in v1's
+  # assert_exit_code, it gets the right code: hand it on with an explicit exit.
   STATUS=0
-  STDOUT="$("$@" 2>"${dir}/err" </dev/null)" || STATUS=$?
+  ( "$@" >"${dir}/out" 2>"${dir}/err" </dev/null || exit "$?" ) || STATUS=$?
+  STDOUT="$(<"${dir}/out")"
   STDERR="$(<"${dir}/err")"
 }
 test::capture() { capture "$@"; }

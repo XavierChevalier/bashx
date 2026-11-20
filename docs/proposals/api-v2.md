@@ -203,14 +203,17 @@ assert "${STDERR}" contains "no such file: /nope"
 assert "${STDOUT}" empty
 ```
 
-`capture` lance la commande dans une substitution `$( )`, stdin fermé, et
-remplit `STATUS`, `STDOUT`, `STDERR` (fins de ligne retirées comme avec
-`$( )`). Le `|| STATUS=$?` est fait à l'intérieur : impossible de l'oublier.
+`capture` lance la commande dans un sous-shell, stdin fermé, et remplit
+`STATUS`, `STDOUT`, `STDERR` (fins de ligne retirées comme avec `$( )`). Le
+`|| STATUS=$?` est fait à l'intérieur : impossible de l'oublier.
 
-- **Pas de `( "$@" ); STATUS=$?` sous `set +e`** : sous bash 5.0, la CI du
-  prototype a lu 0 au lieu de 2 pour un `cmd || return` raté. La forme
-  `$( ) || STATUS=$?`, celle des tests v1, donne le bon code sur toutes les
-  versions testées.
+- **Piège bash 5.0, vu dans la CI du prototype** : une fonction qui se
+  termine par un `cmd || return` raté, lancée seule dans `( )` ou `$( )`,
+  donne le code 0 au lieu de 2 (`calc::add 1 x`). Appelée dans une liste
+  `||`, comme le fait `test::assert_exit_code`, elle donne 2. `capture` fait
+  donc `( "$@" … || exit "$?" ) || STATUS=$?`. C'est aussi un argument pour
+  `capture` : chaque test qui écrit `out="$(f)" || rc=$?` à la main est
+  exposé à ce piège.
 
 - **Majuscules, exprès** : shellcheck (lancé en CI sur tous les `.sh`) signale
   `status` en minuscules comme « jamais assigné » (SC2154) ; il ne le fait pas
