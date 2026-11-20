@@ -227,10 +227,15 @@ runner::run_one() {
   # watchdog would keep a caller's command substitution open.
   local exit_code=0 pid
   if command -v perl >/dev/null 2>&1; then
-    (cd "$(dirname "${file}")" && env "${env[@]}" perl -e 'setpgrp(0,0); alarm shift @ARGV; exec @ARGV' \
-      "${timeout_s}" bash "${file}") >"${out}" 2>&1 </dev/null &
+    # perl leads a new process group and writes its id itself: $! can be the
+    # subshell instead (bash < 5.2 forks before the last command of `( … )`).
+    (cd "$(dirname "${file}")" && env "${env[@]}" perl -e '
+      setpgrp(0, 0);
+      open(my $f, ">", shift @ARGV) or die $!; print $f getpgrp(); close($f);
+      alarm shift @ARGV;
+      exec @ARGV or die $!' \
+      "${work}/${id}.pgid" "${timeout_s}" bash "${file}") >"${out}" 2>&1 </dev/null &
     pid=$!
-    printf '%s' "${pid}" >"${work}/${id}.pgid"
   else
     (cd "$(dirname "${file}")" && env "${env[@]}" bash "${file}") >"${out}" 2>&1 </dev/null &
     pid=$!
