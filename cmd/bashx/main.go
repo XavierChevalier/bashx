@@ -1,6 +1,5 @@
-// bashx: the command behind bin/bashx. It runs test files (`bashx test`),
-// scores coverage (`bashx coverage`) and runs mutation testing (`bashx
-// mutate`). Test files stay bash: they source lib/bashx.sh, and the runner
+// bashx runs bash test files (`bashx test`), scores their coverage (`bashx
+// coverage`) and runs mutation testing (`bashx mutate`). Test files stay bash: they source lib/bashx.sh, and the runner
 // starts `bash <file>` and reads back what the API writes
 // (BASHX_RESULT_FILE, BASHX_CASES_FILE). See docs/how-it-works.md.
 package main
@@ -8,35 +7,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 )
-
-// version is set at build time: -ldflags "-X main.version=X.Y.Z".
-var version = "dev"
-
-// libDir is the bashx lib dir: $BASHX_LIB (bin/bashx sets it), or a lib dir
-// next to the executable.
-func libDir() string {
-	if d := os.Getenv("BASHX_LIB"); d != "" {
-		if abs, err := filepath.Abs(d); err == nil {
-			return abs
-		}
-		return d
-	}
-	exe, err := os.Executable()
-	if err == nil {
-		if real, err := filepath.EvalSymlinks(exe); err == nil {
-			exe = real
-		}
-		for _, cand := range []string{"../lib", "../../lib"} {
-			d := filepath.Join(filepath.Dir(exe), cand)
-			if _, err := os.Stat(filepath.Join(d, "bashx.sh")); err == nil {
-				return d
-			}
-		}
-	}
-	return "lib"
-}
 
 func usage() {
 	fmt.Printf(`bashx %s: tests, coverage and mutation testing for bash
@@ -55,30 +26,45 @@ Usage: bashx <command> [options]
 }
 
 func main() {
-	lib := libDir()
-	os.Setenv("BASHX_LIB", lib)
 	cmd := "help"
 	args := os.Args[1:]
 	if len(args) > 0 {
 		cmd, args = args[0], args[1:]
 	}
+	var run func(lib string, args []string) int
 	switch cmd {
 	case "test":
-		os.Exit(runnerMain(lib, args))
+		run = runnerMain
 	case "coverage":
-		os.Exit(coverageMain(lib, args))
+		run = coverageMain
 	case "mutate":
-		os.Exit(mutationMain(lib, args))
+		run = mutationMain
 	case "lib":
-		fmt.Println(lib)
+		run = func(lib string, _ []string) int {
+			fmt.Println(lib)
+			return 0
+		}
 	case "version", "--version", "-v":
 		fmt.Println("bashx " + version)
+		return
 	case "help", "--help", "-h":
 		usage()
+		return
 	default:
 		fmt.Fprintf(os.Stderr, "bashx: unknown command '%s'\n", cmd)
 		os.Stdout = os.Stderr
 		usage()
 		os.Exit(2)
 	}
+	lib, err := libDir()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "bashx: cannot write the test API to the cache:", err)
+		os.Exit(1)
+	}
+	os.Setenv("BASHX_LIB", lib)
+	// Test files can call the bashx that runs them.
+	if exe, err := os.Executable(); err == nil {
+		os.Setenv("BASHX_BIN", exe)
+	}
+	os.Exit(run(lib, args))
 }

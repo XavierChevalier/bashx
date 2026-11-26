@@ -3,11 +3,11 @@
 # Study: the tooling in Go (or Rust)?
 
 > **Decision:** bashx moved to Go after this study, `bashx mutate` included.
-> The test API (`lib/bashx.sh`) stays bash. Distribution, the main cost below,
-> is handled by `bin/bashx`: it builds the binary when Go is there, else takes
-> it from the release archive or downloads it from the release. See
-> [How it works](how-it-works.md#finding-the-binary). The rest of this page is
-> the study as written, against the bash implementation of commit `87bf118`.
+> The test API (`lib/bashx.sh`) stays bash and ships inside the binary.
+> Distribution, the main cost below, became that of any Go tool: a release
+> binary per platform, or `go install`. See [Installation](installation.md).
+> The rest of this page is the study as written, against the bash
+> implementation of commit `87bf118`.
 
 The question: would bashx run faster with its tooling (`bashx test`, the
 reporters, `bashx coverage`) written in a compiled language, the test API

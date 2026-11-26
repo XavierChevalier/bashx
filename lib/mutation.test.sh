@@ -4,7 +4,7 @@ set -euo pipefail
 # Tests of mutation testing (bashx mutate).
 source "$(dirname "${BASH_SOURCE[0]}")/bashx.sh"
 
-BASHX="$(cd "$(dirname "${BASH_SOURCE[0]}")/../bin" && pwd)/bashx"
+BASHX="${BASHX_BIN:-bashx}"
 
 # Repo in <dir> with lib.sh (two behaviours) and a test that pins only one.
 make_fixture_repo() {

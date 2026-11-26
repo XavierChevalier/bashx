@@ -190,11 +190,13 @@ stderr every 10 seconds.
 
 ```console
 $ bashx lib
-/home/me/.bashx/lib
+/home/me/.cache/bashx/lib-0.2.0-8d0d5274d798
 ```
 
 The directory holding `bashx.sh`. Test files source it with
-`source "${BASHX_LIB:-$(bashx lib)}/bashx.sh"`.
+`source "${BASHX_LIB:-$(bashx lib)}/bashx.sh"`. The binary carries the test
+API and writes it there the first time; with `BASHX_LIB` set, it prints that
+instead.
 
 ## bashx version
 
@@ -221,10 +223,9 @@ Also `bashx --version` and `bashx -v`.
 | `BASHX_FILTER` | test files | Run only the cases whose description contains it. Set by `--filter`; works with `bash x.test.sh` too. |
 | `BASHX_VERBOSE` | test files | Any value: show what passing cases print. Set by `-v`. |
 | `TMPDIR` | everything | Where temporary directories are created (default `/tmp`). |
-| `BASHX_BIN` | `bin/bashx` | The binary to run, instead of building or downloading one. See [How it works](how-it-works.md#finding-the-binary). |
-| `BASHX_RELEASES_URL` | `bin/bashx` | Where to download the binary from (a mirror): `<url>/v<version>/bashx-<os>-<arch>` and its `.sha256`. |
-| `XDG_CACHE_HOME` | `bin/bashx` | Where downloaded binaries are kept (default `~/.cache`), under `bashx/<version>/`. |
-| `BASHX_LIB` | test files | Set by `bashx`; read by test files to find `bashx.sh`. |
+| `XDG_CACHE_HOME` | `bashx` | Where `bashx lib` writes the test API (default `~/.cache`; macOS: `~/Library/Caches`), under `bashx/`. |
+| `BASHX_LIB` | test files, `bashx` | Set by `bashx`; read by test files to find `bashx.sh`. Set it yourself to give the tests another copy of the API (a checkout of bashx). |
+| `BASHX_BIN` | test files | Set by `bashx`: the path of the bashx running the tests, for tests that call it. |
 | `BASHX_RESULT_FILE` | test files | Set by the runner for each file: where `test::main` (`test::summary`) writes the counts. |
 | `BASHX_COVERAGE_TRACE_DIR` | traced processes | Set by `bashx test --coverage`: where each bash process writes its trace. |
 

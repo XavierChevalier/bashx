@@ -2,10 +2,10 @@ name: Release
 
 # On every push to main, release-please keeps a "chore: release X.Y.Z" pull
 # request up to date: next version from the commit messages (Conventional
-# Commits), CHANGELOG.md section, version in bin/bashx and the docs. Merging
+# Commits), CHANGELOG.md section, version in cmd/bashx/version.go and the docs. Merging
 # that pull request tags vX.Y.Z and publishes the GitHub release with its
-# changelog section; the job below builds the binaries and attaches them and
-# bashx-X.Y.Z.tar.gz (bin/, lib/ and libexec/ with every binary).
+# changelog section; the job below builds the binary of every platform and
+# attaches it with its .sha256.
 # See CONTRIBUTING.md#releases.
 
 on:
@@ -38,7 +38,7 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  archive:
+  binaries:
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
@@ -50,28 +50,17 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Check the released version
-        run: test "$(bin/bashx version)" = "bashx ${{ needs.release-please.outputs.version }}"
-      # bin/bashx downloads bashx-<os>-<arch> and its .sha256 from the release.
+        run: test "$(go run ./cmd/bashx version)" = "bashx ${{ needs.release-please.outputs.version }}"
+      # The test API is embedded: each binary is all a user installs.
       - name: Build the binaries
         run: |
           mkdir -p dist
           for platform in linux-amd64 linux-arm64 darwin-amd64 darwin-arm64; do
-            CGO_ENABLED=0 GOOS="${platform%-*}" GOARCH="${platform#*-}" go build -trimpath \
-              -ldflags "-s -w -X main.version=${{ needs.release-please.outputs.version }}" \
+            CGO_ENABLED=0 GOOS="${platform%-*}" GOARCH="${platform#*-}" go build -trimpath -ldflags "-s -w" \
               -o "dist/bashx-${platform}" ./cmd/bashx
             (cd dist && sha256sum "bashx-${platform}" >"bashx-${platform}.sha256")
           done
-          test "$(BASHX_BIN=dist/bashx-linux-amd64 bin/bashx --help | head -1)" = "bashx ${{ needs.release-please.outputs.version }}: tests, coverage and mutation testing for bash"
-      - name: Build bashx-${{ needs.release-please.outputs.version }}.tar.gz
-        run: |
-          name="bashx-${{ needs.release-please.outputs.version }}"
-          mkdir -p "stage/${name}/libexec"
-          git archive HEAD bin lib LICENSE README.md CHANGELOG.md | tar -x -C "stage/${name}"
-          cp dist/bashx-linux-* dist/bashx-darwin-* "stage/${name}/libexec/"
-          rm -f "stage/${name}"/libexec/*.sha256
-          tar -czf "${name}.tar.gz" -C stage "${name}"
-          sha256sum "${name}.tar.gz" >"${name}.tar.gz.sha256"
       - name: Attach them to the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ needs.release-please.outputs.tag_name }}" bashx-*.tar.gz bashx-*.tar.gz.sha256 dist/bashx-* --clobber
+        run: gh release upload "${{ needs.release-please.outputs.tag_name }}" dist/bashx-* --clobber

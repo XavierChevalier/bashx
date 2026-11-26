@@ -2,7 +2,7 @@
 # Tests of the runner (bashx test).
 source "$(dirname "${BASH_SOURCE[0]}")/bashx.sh"
 
-BASHX="$(cd "$(dirname "${BASH_SOURCE[0]}")/../bin" && pwd)/bashx"
+BASHX="${BASHX_BIN:-bashx}"
 
 # Writes an executable test file <path> running <body>.
 write_stub() {

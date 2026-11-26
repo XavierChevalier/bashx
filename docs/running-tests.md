@@ -16,8 +16,7 @@ BASHX_FILTER=retry bash path/to/x.test.sh
 
 - **Finds** every `*.test.sh` under the root, skipping `.git`,
   `node_modules`, `venv`, `.venv`, `.cache`, `.bashx`, and nested git
-  repositories (submodules, vendored clones: a `vendor/bashx` submodule does
-  not run bashx's own tests in your suite).
+  repositories (submodules, vendored clones: their tests are theirs to run).
 - **Runs** them in parallel, each from its own directory, with no stdin.
 - **Streams** each file's output as soon as it finishes, then prints a
   summary. In a terminal a status line shows the files still running; it is

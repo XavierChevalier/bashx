@@ -5,7 +5,7 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/bashx.sh"
 
 LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BASHX="${LIB}/../bin/bashx"
+BASHX="${BASHX_BIN:-bashx}"
 
 coverage() { "${BASHX}" coverage "$@"; }
 
@@ -140,17 +140,16 @@ lib/x.sh:6: return 1
 y.sh:1: echo z"
 }
 
-# A project vendoring bashx scores its own scripts, not bashx's.
+# A project vendoring bashx (BASHX_LIB pointing into it) scores its own
+# scripts, not bashx's.
 test_should_leave_a_vendored_bashx_out() {
   local dir
   dir="$(test::tmp_dir)"
-  mkdir -p "${dir}/vendor/bashx/bin"
+  mkdir -p "${dir}/vendor/bashx"
   cp -R "${LIB}" "${dir}/vendor/bashx/lib"
-  cp "${BASHX}" "${dir}/vendor/bashx/bin/bashx"
   printf 'echo a\n' >"${dir}/app.sh"
   printf 'app.sh\t1\n' >"${dir}/covered.tsv"
-  # The binary of this checkout: the copy has no sources to build.
-  assert "$(BASHX_BIN="${BASHX_BIN:-${LIB}/../.build/bashx}" "${dir}/vendor/bashx/bin/bashx" coverage report -r "${dir}" "${dir}/covered.tsv")" == "covered=1 coverable=1 pct=100.0"
+  assert "$(BASHX_LIB="${dir}/vendor/bashx/lib" coverage report -r "${dir}" "${dir}/covered.tsv")" == "covered=1 coverable=1 pct=100.0"
 }
 
 test_should_refuse_an_unknown_command_or_format() {

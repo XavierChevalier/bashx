@@ -8,33 +8,30 @@ test files without the API, or to reuse a part of bashx on its own.
 ## Layout
 
 ```text
-bin/bashx                 launcher: finds the binary, sets BASHX_LIB, runs it
-cmd/bashx/                the binary (Go): bashx test, coverage, mutate
+cmd/bashx/                the bashx binary (Go)
   runner.go, status.go      bashx test, its status footer
   reports.go                markdown, json, junit reports
   coverage.go               bashx coverage
   mutation.go               bashx mutate
+  libdir.go                 bashx lib: the embedded test API, written to the cache
 lib/bashx.sh              the test API, sourced by test files
 lib/coverage-trace.bash   loaded into every traced bash process
+lib/embed.go              embeds the two files above in the binary
 ```
 
-Test files are bash and only ever source `lib/bashx.sh`: the binary starts
-them with `bash` and reads back the files the API writes.
+Test files are bash and only ever source `bashx.sh`: the binary starts them
+with `bash` and reads back the files the API writes.
 
-## Finding the binary
+## The test API in the binary
 
-`bin/bashx` answers `bashx lib` and `bashx version` itself, and runs the
-binary for everything else, the first it finds of:
+The binary carries `lib/bashx.sh` and `lib/coverage-trace.bash`. Before
+`test`, `coverage`, `mutate` or `lib`, it writes them once to
+`<cache>/bashx/lib-<version>-<hash of their content>/` (`~/.cache`, or
+`XDG_CACHE_HOME`; `~/Library/Caches` on macOS), and passes that directory to
+test files as `BASHX_LIB`. With `BASHX_LIB` already set, it uses that one
+instead: a checkout of bashx, or a copy you keep in your project.
 
-1. `$BASHX_BIN`;
-2. in a checkout (`go.mod` next to `bin/`) with Go on the `PATH`:
-   `.build/bashx`, built from `cmd/bashx` and rebuilt when a source file is
-   newer than it;
-3. `libexec/bashx-<os>-<arch>`, which the release archive ships;
-4. `~/.cache/bashx/<version>/bashx-<os>-<arch>` (`XDG_CACHE_HOME`), downloaded
-   once from the GitHub release of the launcher's version
-   (`BASHX_RELEASES_URL`), with `curl` or `wget`, and checked against its
-   `.sha256`.
+It also passes its own path as `BASHX_BIN`, for tests that run bashx.
 
 ## A case
 

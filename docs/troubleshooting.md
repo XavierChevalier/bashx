@@ -5,9 +5,15 @@
 ## Installation
 
 **`bashx: command not found`**
-The directory holding the `bashx` link is not on your `PATH`. Check with
+The directory holding the `bashx` binary is not on your `PATH`. Check with
 `echo "${PATH}"`, then add it, e.g. `export PATH="${HOME}/.local/bin:${PATH}"`
-in `~/.bashrc`. See [Installation](installation.md#a-clone-and-link).
+in `~/.bashrc` (after `go install`: `$(go env GOPATH)/bin`). See
+[Installation](installation.md#install).
+
+**`cannot execute binary file: Exec format error`**
+The binary is for another platform: download the one `uname -s` and
+`uname -m` name (`bashx-linux-arm64` on an ARM Linux, `bashx-darwin-arm64` on
+Apple silicon).
 
 **`EPOCHREALTIME: unbound variable`, `declare: -A: invalid option`, `mapfile: command not found`**
 Bash is older than 5.0 (macOS ships 3.2). Install a recent bash and make sure
@@ -16,26 +22,13 @@ it comes first on the `PATH`: [macOS](installation.md#requirements).
 **A test file run alone fails with `bashx: command not found` on its first line**
 `source "${BASHX_LIB:-$(bashx lib)}/bashx.sh"` needs `bashx` on the `PATH`
 when `BASHX_LIB` is not set. Either install it on the `PATH`, or run
-`BASHX_LIB=vendor/bashx/lib bash my.test.sh`, or run it through
+`BASHX_LIB=/path/to/bashx/lib bash my.test.sh`, or run it through
 `bashx test path/to/dir`.
 
-**`bashx: no bashx X.Y.Z binary for <os>-<arch>`**
-`bin/bashx` found no Go to build its binary and could not download it: no
-network (or no `curl`/`wget`), or a platform without a release binary.
-Install [Go](https://go.dev/dl/) and run it again, use the release archive
-(its `libexec/` holds every binary), or point `BASHX_BIN` at a binary you
-built (`go build -o bashx ./cmd/bashx` in a checkout). See
-[the binary](installation.md#the-binary).
-
-**`bashx: checksum mismatch for …`**
-The download is corrupted or not the published binary: nothing was installed.
-Run the command again; if it persists, check what sits between you and
-github.com (a proxy rewriting downloads).
-
-**`bashx: could not build …/cmd/bashx`**
-`go build` failed above this line. Go must be 1.22 or later
-(`go version`); to use a downloaded binary instead, take Go off the `PATH`
-for bashx or set `BASHX_BIN`.
+**`bashx: cannot write the test API to the cache`**
+`bashx` writes `bashx.sh` to `~/.cache/bashx` (or `XDG_CACHE_HOME`) before it
+runs tests. Make that directory writable, point `XDG_CACHE_HOME` elsewhere,
+or set `BASHX_LIB` to a copy of bashx's `lib/`.
 
 ## bashx test
 

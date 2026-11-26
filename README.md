@@ -19,27 +19,23 @@ Tests, coverage and mutation testing for bash.
   and tells you which changes no test notices.
 
 Tests are plain bash (≥ 5) with no dependency; the `bashx` command is a
-single binary (Go), built or downloaded by `bin/bashx` on first use. bashx
-tests itself: 93 cases, 99 % of the test API's lines and 86 % of the
-command's statements covered.
+single binary with the test API inside. bashx tests itself: 91 cases, 99 % of
+the test API's lines and 86 % of the command's statements covered.
 
 ## Install
 
+One binary, on your `PATH`. With Go:
+
+<!-- x-release-please-start-version -->
 ```bash
-git clone https://github.com/XavierChevalier/bashx.git ~/.bashx
-ln -s ~/.bashx/bin/bashx ~/.local/bin/bashx   # any directory on your PATH
+go install github.com/XavierChevalier/bashx/cmd/bashx@v0.2.0
 bashx version
 ```
+<!-- x-release-please-end -->
 
-Or vendor it in your project, so CI needs nothing else:
-
-```bash
-git submodule add https://github.com/XavierChevalier/bashx.git vendor/bashx
-vendor/bashx/bin/bashx test
-```
-
-Requirements, macOS, updating and the other ways to install:
-[Installation](docs/installation.md).
+Or download `bashx-<os>-<arch>` (Linux, macOS; amd64, arm64) from the
+[latest release](https://github.com/XavierChevalier/bashx/releases/latest).
+Requirements, macOS, CI and checksums: [Installation](docs/installation.md).
 
 ## Quick start
 
@@ -142,9 +138,7 @@ in the **[documentation index](docs/README.md)**:
 ## Requirements
 
 - bash ≥ 5.0 for the test files, and the usual coreutils
-- the `bashx` binary for your platform (Linux, macOS; amd64, arm64):
-  `bin/bashx` builds it when Go is installed, takes it from the release
-  archive, or downloads it once from the release (curl or wget)
+- the `bashx` binary for your platform (Linux, macOS; amd64, arm64)
 - `bashx mutate`, `bashx coverage`: git
 
 Tested on Linux and macOS (with a recent bash from Homebrew).
