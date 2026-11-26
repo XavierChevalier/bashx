@@ -138,6 +138,7 @@ test::run() {
     echo "│  ${_TEST_RED}✗${_TEST_RESET} ${name} (${duration})"
   fi
   ((show_log == 0)) || sed 's/^/│    /' "${case_tmp}/.log"
+  [[ -z "${BASHX_CASES_FILE:-}" ]] || test::_record_case "${name}" "${status}" "${ms}" "$((show_log == 1))" "${case_tmp}/.log"
   rm -rf -- "${case_tmp:?}"
   return 0
 }
@@ -484,6 +485,33 @@ test::_file_name() {
   root="$(git -C "${dir}" rev-parse --show-toplevel 2>/dev/null || pwd -P)"
   file="${file#"${root}"/}"
   echo "./${file#./}"
+}
+
+# One line per case for the runner's reports (bashx test):
+# <status> TAB <ms> TAB <name> TAB <output>, status passed, failed or skipped,
+# fields escaped by test::_escape, colors stripped. The output is the one the
+# console shows: failed and skipped cases, every case with BASHX_VERBOSE.
+# Usage: test::_record_case <name> <exit status> <ms> <1 to keep the log> <log>
+test::_record_case() {
+  local -r name="$1" status="$2" ms="$3" keep_log="$4" log="$5"
+  local state=failed output=""
+  ((status != 0)) || state=passed
+  ((status != _TEST_SKIP_STATUS)) || state=skipped
+  ((keep_log == 0)) || output="$(sed $'s/\033\\[[0-9;?]*[a-zA-Z]//g' "${log}")"
+  printf '%s\t%s\t%s\t%s\n' "${state}" "${ms}" "$(test::_escape "${name}")" "$(test::_escape "${output}")" \
+    >>"${BASHX_CASES_FILE}"
+}
+
+# <text> on one line: backslash, tab, newline and carriage return written \\,
+# \t, \n and \r (printf %b reads it back).
+# Usage: test::_escape <text>
+test::_escape() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//$'\t'/\\t}"
+  s="${s//$'\n'/\\n}"
+  s="${s//$'\r'/\\r}"
+  printf '%s' "${s}"
 }
 
 # Counts for the runner (bashx test); the exit code stays the pass/fail signal.

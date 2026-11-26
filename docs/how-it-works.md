@@ -67,7 +67,9 @@ For each test file, the runner:
 2. starts `bash <file>` from the file's directory, with no stdin, in a new
    process group, under a deadline (`perl -e 'alarm …; exec …'`, which keeps
    working across `exec` and does not hold a pipe open);
-3. passes `BASHX_RESULT_FILE` (where to write the counts) and `BASHX_LIB`;
+3. passes `BASHX_RESULT_FILE` (where to write the counts),
+   `BASHX_CASES_FILE` (where each case is recorded, for `--report`) and
+   `BASHX_LIB`;
 4. when the file ends, kills whatever is left in its process group;
 5. reads the counts from the result file, or, without one, counts the file
    as one test passed or failed by its exit code;
@@ -82,6 +84,13 @@ skipped=1
 total=4
 duration_ms=27
 ```
+
+`test::run` appends one line per case to `BASHX_CASES_FILE`:
+`<status> TAB <ms> TAB <name> TAB <output>`, status `passed`, `failed` or
+`skipped`, the output being what the console shows of the case (colors
+stripped), backslashes, tabs and newlines written `\\`, `\t` and `\n`. A file
+that records no case, or fails with no failed case (a crash, a timeout), gets
+one `(whole file)` case with its output in the reports.
 
 ### Test files without the API
 

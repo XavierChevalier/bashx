@@ -62,11 +62,23 @@ bashx test --record-durations=.bashx/durations.tsv
 
 | File | Written when | Content |
 | --- | --- | --- |
-| `test_report.markdown` | `--report=markdown` | counts table, failed files, full output |
-| `test_report.json` | `--report=json` | `{"summary": {"passed", "failed", "skipped", "total", "files"}, "failed_files": [...], "output": "..."}` |
-| `test_report.junit` | `--report=junit` | JUnit XML: totals, one `testcase` per failed file |
+| `test_report.markdown` | `--report=markdown` | counts table, failed files, failed cases, full output |
+| `test_report.json` | `--report=json` | `{"summary": {"passed", "failed", "skipped", "total", "files"}, "failed_files": [...], "cases": [...], "output": "..."}` |
+| `test_report.junit` | `--report=junit` | JUnit XML: totals, one `testcase` per case (`classname` = the file), the output of a failed or skipped case in its `<failure>` or `<skipped>` |
 | `DIR/covered.tsv` | `--coverage=DIR` | `path<TAB>line` for each project line that ran |
 | `FILE` | `--record-durations=FILE` | `seconds<TAB>path` per file, sorted by path |
+
+Each entry of `cases` (JSON) is
+`{"file", "name", "status", "duration_ms", "output"}`: `status` is `passed`,
+`failed` or `skipped`, `output` is what the console shows of the case (the
+failing assert or command with its values; empty for a passing case unless
+`-v`), colors stripped. A file that ran no case through the bashx API, or
+failed with no failed case (a crash, a timeout), is one case named
+`(whole file)` with the file's output. Failed cases of a run:
+
+```bash
+jq -r '.cases[] | select(.status == "failed") | "\(.file): \(.name)\n\(.output)"' test_report.json
+```
 
 ### Exit codes
 

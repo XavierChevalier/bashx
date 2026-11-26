@@ -202,7 +202,8 @@ runner::status_render() {
 # ── One file ─────────────────────────────────────────────────────────────────
 
 # Runs one test file, isolated: own process group, no stdin, a deadline. Writes
-# <work>/<id>.{out,result,exit,elapsed} (and .timeout when the deadline fired).
+# <work>/<id>.{out,result,cases,exit,elapsed} (and .timeout when the deadline
+# fired).
 # Runs in the background; the main loop polls for <id>.exit.
 # Usage: runner::run_one <file> <work dir> <id> <timeout s> <display path>
 runner::run_one() {
@@ -222,7 +223,7 @@ runner::run_one() {
   fi
 
   # --coverage: every bash the test starts loads the tracer.
-  local -a env=(BASHX_RESULT_FILE="${result}" BASHX_LIB="${RUNNER_DIR}")
+  local -a env=(BASHX_RESULT_FILE="${result}" BASHX_CASES_FILE="${work}/${id}.cases" BASHX_LIB="${RUNNER_DIR}")
   [[ -z "${BASHX_COVERAGE_TRACE_DIR:-}" ]] || env+=(BASH_ENV="${RUNNER_DIR}/coverage-trace.bash")
 
   # The deadline rides on perl's alarm, which survives exec: a background
@@ -305,9 +306,37 @@ runner::emit() {
   runner__skipped=$((runner__skipped + file_skipped))
   runner__total=$((runner__total + file_total))
   runner__files=$((runner__files + 1))
+  local -r path="$(runner::relative_path "${runner__root}" "${file}")"
+  local state=passed
+  ((file_skipped == 0)) || state=skipped
   if ((exit_code != 0 || file_failed > 0)); then
-    runner__failed_files+=("$(runner::relative_path "${runner__root}" "${file}")")
+    runner__failed_files+=("${path}")
+    state=failed
   fi
+  runner::collect_cases "${work}" "${id}" "${path}" "${state}"
+}
+
+# Appends the cases of a finished file (test::_record_case) to <work>/cases.tsv,
+# its path first. A file that recorded no case (no bashx API, skipped, crashed
+# before its first case) or failed with none failed (timeout, exit after the
+# last case) adds a "(whole file)" case of <state> with the file's output,
+# unless it used the bashx API and passed (--filter matched nothing).
+# Usage: runner::collect_cases <work dir> <id> <path> <state of the file>
+runner::collect_cases() {
+  local -r work="$1" id="$2" path="$3" state="$4"
+  local -r cases="${work}/${id}.cases" out="${work}/cases.tsv" file_field="$(test::_escape "${path}")"
+  local line
+  if [[ -f "${cases}" ]]; then
+    while IFS= read -r line; do printf '%s\t%s\n' "${file_field}" "${line}"; done <"${cases}" >>"${out}"
+    [[ "${state}" == failed ]] || return 0
+    ! grep -q $'^failed\t' "${cases}" || return 0
+  elif [[ "${state}" == passed && -f "${work}/${id}.result" ]]; then
+    return 0  # bashx API, no case run (--filter)
+  fi
+  local output="" ms
+  ms="$(awk '{ printf "%d", $1 * 1000 }' "${work}/${id}.elapsed" 2>/dev/null)" || ms=0
+  [[ "${state}" == passed ]] || output="$(sed $'s/\033\\[[0-9;?]*[a-zA-Z]//g' "${work}/${id}.out")"
+  printf '%s\t%s\t%s\t(whole file)\t%s\n' "${file_field}" "${state}" "${ms:-0}" "$(test::_escape "${output}")" >>"${out}"
 }
 
 # Kills every process group a test file was given (EXIT trap).
@@ -361,15 +390,15 @@ runner::run_all() {
 }
 
 # Writes test_report.<format> with the reporter of that name.
-# Usage: runner::report <format> <log>
+# Usage: runner::report <format> <log> <cases>
 runner::report() {
-  local -r format="$1" log="$2"
+  local -r format="$1" log="$2" cases="$3"
   local -r reporter="${RUNNER_DIR}/reporters/${format}.sh"
   [[ -f "${reporter}" ]] || {
     echo "Unknown report format: ${format} (markdown, json, junit)" >&2
     return 1
   }
-  "${reporter}" "test_report.${format}" "${log}" "${runner__passed}" "${runner__failed}" \
+  "${reporter}" "test_report.${format}" "${log}" "${cases}" "${runner__passed}" "${runner__failed}" \
     "${runner__skipped}" "${runner__total}" "${runner__files}" "${runner__failed_files[@]+"${runner__failed_files[@]}"}"
   echo
   echo "📄 Report generated: test_report.${format}"
@@ -434,6 +463,7 @@ runner::main() {
   runner__expected_files="${#files[@]}" runner__started_at="${SECONDS}"
   runner__failed_files=()
   : >"${runner__log}"
+  : >"${work}/cases.tsv"
   local -r started_us="$(test::_now_us)"
 
   ((${#files[@]} == 0)) || runner::run_all "${work}" "${jobs}" "${timeout_s}" "${files[@]}"
@@ -466,7 +496,7 @@ runner::main() {
     printf '  • %s\n' "${runner__failed_files[@]}" | tee -a "${runner__log}"
   fi
 
-  [[ -z "${report}" ]] || runner::report "${report}" "${runner__log}"
+  [[ -z "${report}" ]] || runner::report "${report}" "${runner__log}" "${work}/cases.tsv"
   ((runner__failed == 0 && ${#runner__failed_files[@]} == 0))
 }
 
