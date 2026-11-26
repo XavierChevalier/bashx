@@ -201,7 +201,7 @@ The directory holding `bashx.sh`. Test files source it with
 <!-- x-release-please-start-version -->
 ```console
 $ bashx version
-bashx 0.1.1
+bashx 0.2.0
 ```
 <!-- x-release-please-end -->
 

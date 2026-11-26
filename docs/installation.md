@@ -94,7 +94,7 @@ Every [release](https://github.com/XavierChevalier/bashx/releases) has a
 
 <!-- x-release-please-start-version -->
 ```bash
-version=0.1.1
+version=0.2.0
 base="https://github.com/XavierChevalier/bashx/releases/download/v${version}"
 curl -fsSLO "${base}/bashx-${version}.tar.gz" -O "${base}/bashx-${version}.tar.gz.sha256"
 sha256sum -c "bashx-${version}.tar.gz.sha256"
@@ -108,7 +108,7 @@ Commit `vendor/bashx`. Keep the `LICENSE` file with it.
 
 <!-- x-release-please-start-version -->
 ```bash
-git clone --depth 1 --branch v0.1.1 https://github.com/XavierChevalier/bashx.git /tmp/bashx
+git clone --depth 1 --branch v0.2.0 https://github.com/XavierChevalier/bashx.git /tmp/bashx
 /tmp/bashx/bin/bashx test
 ```
 <!-- x-release-please-end -->
@@ -120,7 +120,7 @@ Pin a tag, not `main`, so a new release cannot change your CI by itself.
 <!-- x-release-please-start-version -->
 ```console
 $ bashx version
-bashx 0.1.1
+bashx 0.2.0
 $ bashx lib
 /home/me/.bashx/lib
 ```

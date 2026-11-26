@@ -14,7 +14,7 @@
 # `bashx lib` and `bashx version` answer without the binary.
 set -euo pipefail
 
-BASHX_VERSION="0.1.1" # x-release-please-version
+BASHX_VERSION="0.2.0" # x-release-please-version
 # Where release binaries are downloaded from: <url>/v<version>/bashx-<os>-<arch>.
 BASHX_RELEASES_URL="${BASHX_RELEASES_URL:-https://github.com/XavierChevalier/bashx/releases/download}"
 
