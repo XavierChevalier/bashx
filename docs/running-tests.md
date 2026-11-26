@@ -16,8 +16,7 @@ BASHX_FILTER=retry bash path/to/x.test.sh
 
 - **Finds** every `*.test.sh` under the root, skipping `.git`,
   `node_modules`, `venv`, `.venv`, `.cache`, `.bashx`, and nested git
-  repositories (submodules, vendored clones: a `vendor/bashx` submodule does
-  not run bashx's own tests in your suite).
+  repositories (submodules, vendored clones: their tests are theirs to run).
 - **Runs** them in parallel, each from its own directory, with no stdin.
 - **Streams** each file's output as soon as it finishes, then prints a
   summary. In a terminal a status line shows the files still running; it is
@@ -58,8 +57,7 @@ Every option, with its exact syntax and exit codes, is in the
 
 ## Isolation
 
-Each file runs in its own process group with a deadline (when `perl` is
-available). When the file ends, every process it left behind is killed: a
+Each file runs in its own process group with a deadline. When the file ends, every process it left behind is killed: a
 `sleep 300 &` forgotten in a test cannot outlive the suite or hold its output
 open.
 

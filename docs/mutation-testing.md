@@ -132,7 +132,7 @@ run mutation on the scripts that matter, and use `-o` and `-m` to try it out.
 
 - Line-based: an operator inside a string literal (`echo "a && b"`) is also
   mutated. Such mutants usually survive; mark the line if it matters.
-- Needs a git repository and GNU `timeout`, `shuf`, `realpath`.
+- Needs a git repository: it copies the tracked and untracked files.
 
 ---
 

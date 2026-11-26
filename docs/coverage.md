@@ -14,8 +14,8 @@ ran. Score it again, per script or for a PR comment:
 ```console
 $ bashx coverage report -f tsv coverage/covered.tsv
 path	covered	coverable
-lib/runner.sh	214	270
-lib/bashx.sh	121	121
+lib/deploy.sh	214	270
+lib/config.sh	121	121
 
 $ bashx coverage report -f markdown coverage/covered.tsv
 **Coverage:** 90.7% of bash lines (680/750)
@@ -25,9 +25,9 @@ $ bashx coverage report -f markdown coverage/covered.tsv
 
 ```console
 $ bashx coverage report -f uncovered coverage/covered.tsv
-lib/coverage.sh:103: echo "no trace dir ${traces}" >&2
-lib/coverage.sh:104: return 1
-lib/coverage.sh:178: usage
+lib/deploy.sh:103: echo "no target ${target}" >&2
+lib/deploy.sh:104: return 1
+lib/deploy.sh:178: usage
 ...
 ```
 
@@ -44,8 +44,8 @@ output and stderr your tests check are untouched.
 
 The score is over the project's scripts: the `*.sh` files git tracks or would
 track (every `*.sh` outside git), minus `*.test.sh` files, anything under a
-`fixtures/` directory, and bashx itself when the project vendors it (e.g.
-`vendor/bashx/`). Leave out more with `-x`:
+`fixtures/` directory, and bashx's own scripts when `BASHX_LIB` points to a copy of bashx inside
+the project (e.g. `vendor/bashx/lib`). Leave out more with `-x`:
 
 ```bash
 bashx coverage report -x '^(vendor|examples)/' coverage/covered.tsv

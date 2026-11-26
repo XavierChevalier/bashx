@@ -34,7 +34,7 @@ current directory, or the current directory outside git. Details:
 | --- | --- | --- |
 | `--kind=KIND` | all files | Only files named `*.KIND.test.sh`. `KIND` is any word: `unit`, `integration`, `slow`… |
 | `--jobs=N` | CPU count, or `BASHX_JOBS` | Number of files running at the same time. `--jobs=1` runs them one by one. |
-| `--timeout=SECONDS` | 60, or `BASHX_TIMEOUT` | Deadline of each file. Past it, the file and every process it started are killed, and the file fails with `⏱️ TIMEOUT after Ns`. Needs `perl`. |
+| `--timeout=SECONDS` | 60, or `BASHX_TIMEOUT` | Deadline of each file. Past it, the file and every process it started are killed, and the file fails with `⏱️ TIMEOUT after Ns`. |
 | `--shard=I/N` | `1/1` | Run only part `I` of `N` (CI matrix). Every file belongs to exactly one shard. |
 | `--durations=FILE` | `<root>/.bashx/durations.tsv` | Durations used to balance shards and start long files first. A missing file is fine. |
 | `--record-durations=FILE` | | Write each file's duration to `FILE` (directories created). |
@@ -190,11 +190,13 @@ stderr every 10 seconds.
 
 ```console
 $ bashx lib
-/home/me/.bashx/lib
+/home/me/.cache/bashx/lib-0.2.0-8d0d5274d798
 ```
 
 The directory holding `bashx.sh`. Test files source it with
-`source "${BASHX_LIB:-$(bashx lib)}/bashx.sh"`.
+`source "${BASHX_LIB:-$(bashx lib)}/bashx.sh"`. The binary carries the test
+API and writes it there the first time; with `BASHX_LIB` set, it prints that
+instead.
 
 ## bashx version
 
@@ -221,7 +223,9 @@ Also `bashx --version` and `bashx -v`.
 | `BASHX_FILTER` | test files | Run only the cases whose description contains it. Set by `--filter`; works with `bash x.test.sh` too. |
 | `BASHX_VERBOSE` | test files | Any value: show what passing cases print. Set by `-v`. |
 | `TMPDIR` | everything | Where temporary directories are created (default `/tmp`). |
-| `BASHX_LIB` | test files | Set by `bashx`; read by test files to find `bashx.sh`. |
+| `XDG_CACHE_HOME` | `bashx` | Where `bashx lib` writes the test API (default `~/.cache`; macOS: `~/Library/Caches`), under `bashx/`. |
+| `BASHX_LIB` | test files, `bashx` | Set by `bashx`; read by test files to find `bashx.sh`. Set it yourself to give the tests another copy of the API (a checkout of bashx). |
+| `BASHX_BIN` | test files | Set by `bashx`: the path of the bashx running the tests, for tests that call it. |
 | `BASHX_RESULT_FILE` | test files | Set by the runner for each file: where `test::main` (`test::summary`) writes the counts. |
 | `BASHX_COVERAGE_TRACE_DIR` | traced processes | Set by `bashx test --coverage`: where each bash process writes its trace. |
 

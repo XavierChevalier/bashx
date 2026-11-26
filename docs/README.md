@@ -26,6 +26,7 @@ the tests would notice a bug (mutation testing). Everything is bash.
 | [Command line](cli.md) | every command, option, environment variable, output file and exit code |
 | [API](api.md) | every function and `assert` operator, with an example |
 | [How it works](how-it-works.md) | the runner's protocol, isolation, tracing, sandboxes; writing tests without the API |
+| [Study: a Go runner](go-runner-study.md) | the benchmark of the Go port against the bash tooling it replaced |
 | [Troubleshooting](troubleshooting.md) | error messages and their fixes |
 | [Contributing](../CONTRIBUTING.md) | checks, commit messages, how releases are made |
 | [Changelog](../CHANGELOG.md) | what changed in each release |

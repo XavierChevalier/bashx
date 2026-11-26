@@ -3,24 +3,33 @@
 ## Checks to run before a pull request
 
 ```bash
-shellcheck -x -S warning bin/bashx $(git ls-files '*.sh' '*.bash')
-bin/bashx test
-bin/bashx mutate lib/<the script you changed>.sh   # optional, slower
+shellcheck -x -S warning $(git ls-files '*.sh' '*.bash')
+gofmt -l cmd lib && go vet ./... && go test ./...
+go run ./cmd/bashx test                             # the whole suite
+go run ./cmd/bashx mutate lib/bashx.sh              # optional, slower
 ```
+
+The command is Go (`cmd/bashx`, Go ≥ 1.22, no dependency); the test API
+(`lib/bashx.sh`) is bash, embedded in the binary. `go run ./cmd/bashx`
+builds both as they are in your checkout, so it always runs what you edit.
+The bash suite (`*.test.sh`) drives the binary as a user would, through
+`BASHX_BIN`; `cmd/bashx/*_test.go` holds the unit tests of its parts.
 
 CI runs the same checks, and more:
 
 | Job | Checks |
 | --- | --- |
 | `shellcheck` | every script, warnings and above |
-| `test (ubuntu, coverage)` | the whole suite, with the coverage table in the job summary |
+| `go` | `gofmt`, `go vet`, the Go unit tests |
+| `test (ubuntu, coverage)` | the whole suite, with the bash and Go coverage in the job summary |
 | `test (bash 5.0/5.1/5.2)` | the suite on each supported bash, on the official `bash` images |
 | `test (macos)` | the suite on macOS with Homebrew bash and coreutils |
 | `mutation (example)` | `bashx mutate` on the example, report in the job summary |
 | `PR title` | the title follows Conventional Commits (below) |
 
-Every change to `lib/` comes with its tests, next to the file
-(`lib/x.sh` → `lib/x.test.sh`).
+Every change comes with its tests: next to the file for `lib/`
+(`lib/x.sh` → `lib/x.test.sh`), in `lib/*.test.sh` or `cmd/bashx/cli.test.sh`
+(through the binary) or `cmd/bashx/*_test.go` for the commands.
 
 ## Commit messages and pull request titles
 
@@ -55,13 +64,14 @@ Nothing to do by hand but merging:
    pull request named `chore: release X.Y.Z`, which:
    - adds the `X.Y.Z` section to `CHANGELOG.md`, from the commits since the
      last release;
-   - sets the version in `bin/bashx`, `version.txt`,
+   - sets the version in `cmd/bashx/version.go`, `version.txt`,
      `.release-please-manifest.json` and the version shown in the docs.
 2. Merging that pull request:
    - tags `vX.Y.Z`;
    - publishes the GitHub release, with the changelog section as its notes;
-   - attaches `bashx-X.Y.Z.tar.gz` (`bin/`, `lib/`, `LICENSE`, `README.md`,
-     `CHANGELOG.md`) and its `.sha256`.
+   - builds the binary for Linux and macOS, amd64 and arm64, and attaches
+     each one (`bashx-<os>-<arch>`) with its `.sha256`. `go install
+     …/cmd/bashx@vX.Y.Z` works from the tag itself.
 
 To force a version, add a commit with a `Release-As: 1.0.0` footer:
 

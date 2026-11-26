@@ -8,17 +8,30 @@ test files without the API, or to reuse a part of bashx on its own.
 ## Layout
 
 ```text
-bin/bashx                 the command: dispatches to lib/
+cmd/bashx/                the bashx binary (Go)
+  runner.go, status.go      bashx test, its status footer
+  reports.go                markdown, json, junit reports
+  coverage.go               bashx coverage
+  mutation.go               bashx mutate
+  libdir.go                 bashx lib: the embedded test API, written to the cache
 lib/bashx.sh              the test API, sourced by test files
-lib/runner.sh             bashx test
-lib/coverage.sh           bashx coverage
 lib/coverage-trace.bash   loaded into every traced bash process
-lib/mutation.sh           bashx mutate
-lib/reporters/*.sh        markdown, json, junit reports
+lib/embed.go              embeds the two files above in the binary
 ```
 
-Each `lib/*.sh` file also runs on its own (`bash lib/runner.sh --help`); `bin/bashx`
-only sets `BASHX_LIB` and calls them.
+Test files are bash and only ever source `bashx.sh`: the binary starts them
+with `bash` and reads back the files the API writes.
+
+## The test API in the binary
+
+The binary carries `lib/bashx.sh` and `lib/coverage-trace.bash`. Before
+`test`, `coverage`, `mutate` or `lib`, it writes them once to
+`<cache>/bashx/lib-<version>-<hash of their content>/` (`~/.cache`, or
+`XDG_CACHE_HOME`; `~/Library/Caches` on macOS), and passes that directory to
+test files as `BASHX_LIB`. With `BASHX_LIB` already set, it uses that one
+instead: a checkout of bashx, or a copy you keep in your project.
+
+It also passes its own path as `BASHX_BIN`, for tests that run bashx.
 
 ## A case
 
@@ -65,8 +78,8 @@ For each test file, the runner:
 
 1. reads the header for `# @requires`; skips the file if a command is missing;
 2. starts `bash <file>` from the file's directory, with no stdin, in a new
-   process group, under a deadline (`perl -e 'alarm …; exec …'`, which keeps
-   working across `exec` and does not hold a pipe open);
+   process group, under a deadline: past it, the file's bash gets `SIGALRM`
+   and the file fails with a timeout;
 3. passes `BASHX_RESULT_FILE` (where to write the counts),
    `BASHX_CASES_FILE` (where each case is recorded, for `--report`) and
    `BASHX_LIB`;
@@ -143,7 +156,8 @@ another shell (`sh script.sh`), is not traced.
    place the operator matches;
 4. splits them over the jobs; each job, for each of its mutants, writes the
    mutated file, checks it parses (`bash -n`), runs the test files one by one
-   under `timeout` until one fails, then restores the file;
+   until one fails (each in its own process group, sent `SIGTERM` at the
+   deadline and `SIGKILL` 5 s later), then restores the file;
 5. joins the results into the report.
 
 Your working tree is only read, in step 1.

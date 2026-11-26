@@ -4,7 +4,7 @@
 [![Release](https://img.shields.io/github/v/release/XavierChevalier/bashx)](https://github.com/XavierChevalier/bashx/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-Tests, coverage and mutation testing for bash, in bash.
+Tests, coverage and mutation testing for bash.
 
 - **Write tests** as plain bash functions: `assert "$(add 2 3)" == 5`, a
   command's status and outputs with `capture`, mocks that record their calls,
@@ -18,26 +18,24 @@ Tests, coverage and mutation testing for bash, in bash.
   of your script at a time (`-gt` → `-ge`, `&&` → `||`, a command deleted…)
   and tells you which changes no test notices.
 
-No dependency beyond bash ≥ 5 and the usual coreutils. bashx tests itself:
-103 cases, 91 % line coverage.
+Tests are plain bash (≥ 5) with no dependency; the `bashx` command is a
+single binary with the test API inside. bashx tests itself: 91 cases, 99 % of
+the test API's lines and 86 % of the command's statements covered.
 
 ## Install
 
+One binary, on your `PATH`. With Go:
+
+<!-- x-release-please-start-version -->
 ```bash
-git clone https://github.com/XavierChevalier/bashx.git ~/.bashx
-ln -s ~/.bashx/bin/bashx ~/.local/bin/bashx   # any directory on your PATH
+go install github.com/XavierChevalier/bashx/cmd/bashx@v0.2.0
 bashx version
 ```
+<!-- x-release-please-end -->
 
-Or vendor it in your project, so CI needs nothing else:
-
-```bash
-git submodule add https://github.com/XavierChevalier/bashx.git vendor/bashx
-vendor/bashx/bin/bashx test
-```
-
-Requirements, macOS, updating and the other ways to install:
-[Installation](docs/installation.md).
+Or download `bashx-<os>-<arch>` (Linux, macOS; amd64, arm64) from the
+[latest release](https://github.com/XavierChevalier/bashx/releases/latest).
+Requirements, macOS, CI and checksums: [Installation](docs/installation.md).
 
 ## Quick start
 
@@ -139,12 +137,11 @@ in the **[documentation index](docs/README.md)**:
 
 ## Requirements
 
-- bash ≥ 5.0, find, awk, mktemp, sort (Linux: present everywhere)
-- `bashx mutate`: git (it copies the tracked files), GNU `timeout`, `shuf`,
-  `realpath`
-- Optional: `perl` (per-file deadline and process-group cleanup in `bashx test`)
+- bash ≥ 5.0 for the test files, and the usual coreutils
+- the `bashx` binary for your platform (Linux, macOS; amd64, arm64)
+- `bashx mutate`, `bashx coverage`: git
 
-Tested on Linux. macOS needs a recent bash and GNU coreutils (Homebrew).
+Tested on Linux and macOS (with a recent bash from Homebrew).
 
 ## License
 

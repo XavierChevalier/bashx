@@ -20,7 +20,7 @@
       "package-name": "bashx",
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
-        { "type": "generic", "path": "bin/bashx" },
+        { "type": "generic", "path": "cmd/bashx/version.go" },
         { "type": "generic", "path": "docs/installation.md" },
         { "type": "generic", "path": "docs/cli.md" },
         { "type": "generic", "path": "docs/ci.md" }
