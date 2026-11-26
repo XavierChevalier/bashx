@@ -52,7 +52,7 @@ Every option, with its exact syntax and exit codes, is in the
 | `--durations=FILE` | `<root>/.bashx/durations.tsv` | Durations used to balance shards and start long files first. |
 | `--record-durations=FILE` | | Write each file's duration (`seconds<TAB>path`). |
 | `--coverage=DIR` | | Measure line coverage: see [Coverage](coverage.md). |
-| `--report=FORMAT` | | Also write `test_report.markdown`, `.json` or `.junit` in the current directory. |
+| `--report=FORMAT` | | Also write `test_report.markdown`, `.json` or `.junit` in the current directory, with each case and the output of the failed ones. See [the formats](cli.md#output-files). |
 | `--filter=TEXT` | | Only the cases whose description contains `TEXT`. |
 | `-v`, `--verbose` | | Show what passing cases print; by default a case's output shows only when it fails or is skipped. |
 

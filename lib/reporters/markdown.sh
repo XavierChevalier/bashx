@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Markdown report: summary, failed files, full output.
-# Usage: markdown.sh <report> <log> <passed> <failed> <skipped> <total> <files> [<failed file>...]
+# Markdown report: summary, failed files and cases, full output.
+# Usage: markdown.sh <report> <log> <cases> <passed> <failed> <skipped> <total> <files> [<failed file>...]
 set -euo pipefail
 
 main() {
-  local -r report="$1" log="$2" passed="$3" failed="$4" skipped="$5" total="$6" files="$7"
-  shift 7
+  local -r report="$1" log="$2" cases="$3" passed="$4" failed="$5" skipped="$6" total="$7" files="$8"
+  shift 8
+  local file status name
   {
     echo "# Test Report"
     echo
@@ -17,6 +18,13 @@ main() {
       echo "## Failed test files"
       echo
       printf -- '- `%s`\n' "$@"
+      echo
+      echo "## Failed cases"
+      echo
+      while IFS=$'\t' read -r file status _ name _; do
+        [[ "${status}" == failed ]] || continue
+        printf -- '- `%s`: %s\n' "$(printf '%b' "${file}")" "$(printf '%b' "${name}")"
+      done <"${cases}"
     fi
     echo
     echo "## Output"

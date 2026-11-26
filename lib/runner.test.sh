@@ -265,20 +265,55 @@ test_should_write_markdown_json_and_junit_reports() {
   local tmp format
   tmp="$(test::tmp_dir)"
   write_stub "${tmp}/tests/ok.test.sh" 'echo "say \"hi\""'
-  write_stub "${tmp}/tests/bad.test.sh" 'exit 1'
+  write_stub "${tmp}/tests/bad.test.sh" 'echo "crashed <here>"; exit 1'
+  write_stub "${tmp}/tests/cases.test.sh" 'source "${BASHX_LIB}/bashx.sh"
+test_should_pass() { echo "quiet"; }
+test_should_compare() { assert "1 & 2" == "1 & 3"; }
+test_should_wait() { test::skip "later"; }
+test::main'
   for format in markdown json junit; do
     (cd "${tmp}" && run_runner tests --report="${format}" >/dev/null 2>&1) || true
   done
-  assert "${tmp}/test_report.markdown" has "| 1 | 1 | 0 | 2 | 2 |"
+  assert "${tmp}/test_report.markdown" has "| 2 | 2 | 1 | 5 | 3 |"
   assert "${tmp}/test_report.markdown" has '- `bad.test.sh`'
-  assert "${tmp}/test_report.json" has '"summary": {"passed": 1, "failed": 1, "skipped": 0, "total": 2, "files": 2}'
-  assert "${tmp}/test_report.json" has '"failed_files": ["bad.test.sh"]'
+  assert "${tmp}/test_report.markdown" has '- `cases.test.sh`: should compare'
+  assert "${tmp}/test_report.json" has '"summary": {"passed": 2, "failed": 2, "skipped": 1, "total": 5, "files": 3}'
+  assert "${tmp}/test_report.json" has '"failed_files": ["bad.test.sh", "cases.test.sh"]'
   assert "${tmp}/test_report.json" has 'say \"hi\"'
-  assert "${tmp}/test_report.junit" has 'tests="2" failures="1" skipped="0"'
-  assert "${tmp}/test_report.junit" has '<testcase classname="bashx" name="bad.test.sh">'
+  # One object per case, with what the console shows of it; a file without
+  # cases (no bashx API, crash) is one "(whole file)" case.
+  assert "${tmp}/test_report.json" has '{"file": "cases.test.sh", "name": "should pass", "status": "passed", "duration_ms": '
+  assert "$(grep -F '"name": "should pass"' "${tmp}/test_report.json")" ends_with '"output": ""},'
+  assert "$(grep -F '"name": "should compare"' "${tmp}/test_report.json")" contains '"status": "failed"'
+  assert "$(grep -F '"name": "should compare"' "${tmp}/test_report.json")" contains 'expected: 1 & 3\n'
+  assert "$(grep -F '"name": "should wait"' "${tmp}/test_report.json")" contains '"status": "skipped"'
+  assert "$(grep -F '"file": "bad.test.sh"' "${tmp}/test_report.json")" contains '"name": "(whole file)", "status": "failed"'
+  assert "$(grep -F '"file": "bad.test.sh"' "${tmp}/test_report.json")" contains '"output": "crashed <here>"'
+  assert "$(grep -F '"file": "ok.test.sh"' "${tmp}/test_report.json")" contains '"status": "passed"'
+  assert "$(grep -c '"file": ' "${tmp}/test_report.json")" == 5
+  assert "${tmp}/test_report.junit" has 'tests="5" failures="2" skipped="1"'
+  assert "$(<"${tmp}/test_report.junit")" matches '<testcase classname="cases.test.sh" name="should pass" time="[0-9.]+"/>'
+  assert "${tmp}/test_report.junit" has '<failure message="test failed">'
+  assert "${tmp}/test_report.junit" has 'expected: 1 &amp; 3'
+  assert "${tmp}/test_report.junit" has '<skipped>skipped: later</skipped>'
+  assert "${tmp}/test_report.junit" has 'crashed &lt;here&gt;</failure>'
   local rc=0
   (cd "${tmp}" && run_runner tests --report=yaml >/dev/null 2>&1) || rc=$?
   assert "${rc}" == 1  # unknown format
+}
+
+# A file that dies after its last passing case still shows in the cases.
+test_should_report_a_file_failing_after_its_cases_as_a_failed_case() {
+  local tmp
+  tmp="$(test::tmp_dir)"
+  write_stub "${tmp}/late.test.sh" 'source "${BASHX_LIB}/bashx.sh"
+test::init
+test::run ok true
+test::summary
+echo "dying late"; exit 3'
+  (cd "${tmp}" && run_runner . --report=json >/dev/null 2>&1) || true
+  assert "$(grep -c '"file": "late.test.sh"' "${tmp}/test_report.json")" == 2
+  assert "${tmp}/test_report.json" has '"name": "(whole file)", "status": "failed"'
 }
 
 test_should_measure_the_coverage_of_scripts_the_tests_run() {

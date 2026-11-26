@@ -210,6 +210,28 @@ test::summary'
   assert "$(cat "${tmp}/result")" matches 'duration_ms=[0-9]+'
 }
 
+test_should_record_each_case_for_the_runner_reports() {
+  local tmp
+  tmp="$(test::tmp_dir)"
+  write_suite "${tmp}/cases.test.sh" '
+noisy_ok() { echo "hidden"; }
+broken() { printf "a\tb\\\\c\n"; echo "second line"; false; }
+skipper() { test::skip "no network"; }
+test::init
+test::run ok noisy_ok
+test::run "it breaks" broken
+test::run skip skipper
+test::summary'
+  # Colors on: the record strips them.
+  BASHX_CASES_FILE="${tmp}/cases" env -u NO_COLOR bash "${tmp}/cases.test.sh" >/dev/null 2>&1 || true
+  assert "$(cut -f1,3 "${tmp}/cases")" == $'passed\tok\nfailed\tit breaks\nskipped\tskip'
+  assert "$(cut -f2 "${tmp}/cases" | paste -sd' ')" matches '^[0-9]+ [0-9]+ [0-9]+$'
+  # One line per case, read back by printf %b; a passing case keeps no output.
+  assert "$(sed -n 1p "${tmp}/cases" | cut -f4)" empty
+  assert "$(printf '%b' "$(sed -n 2p "${tmp}/cases" | cut -f4)")" == $'a\tb\\c\nsecond line'
+  assert "$(sed -n 3p "${tmp}/cases" | cut -f4)" == "skipped: no network"
+}
+
 test_should_name_the_file_relative_to_its_git_root() {
   local tmp
   tmp="$(test::tmp_dir)"
