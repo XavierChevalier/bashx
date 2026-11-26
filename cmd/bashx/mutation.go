@@ -402,7 +402,7 @@ func runTest(lib, sandboxDir string, deadline time.Duration, testFile string) in
 	os.Remove(result)
 	cmd := exec.Command("bash", filepath.Base(testFile))
 	cmd.Dir = filepath.Join(sandboxDir, filepath.Dir(testFile))
-	cmd.Env = append(os.Environ(), "BASHX_RESULT_FILE="+result, "BASHX_LIB="+lib, "NO_COLOR=1")
+	cmd.Env = append(cmd.Environ(), "BASHX_RESULT_FILE="+result, "BASHX_LIB="+lib, "NO_COLOR=1")
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if err := cmd.Start(); err != nil {
 		return 127

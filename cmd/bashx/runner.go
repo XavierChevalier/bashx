@@ -276,7 +276,9 @@ func (r *runner) runOne(id int, file string) fileResult {
 	cmd := exec.Command("bash", file)
 	cmd.Dir = filepath.Dir(file)
 	cmd.Stdout, cmd.Stderr = out, out
-	env := append(os.Environ(), "BASHX_RESULT_FILE="+res.result, "BASHX_CASES_FILE="+res.cases, "BASHX_LIB="+r.lib)
+	// cmd.Environ() sets PWD to Dir: bash keeps the logical path (through
+	// links, as `cd` would), which the coverage traces must share with root.
+	env := append(cmd.Environ(), "BASHX_RESULT_FILE="+res.result, "BASHX_CASES_FILE="+res.cases, "BASHX_LIB="+r.lib)
 	if r.coverage {
 		env = append(env, "BASH_ENV="+filepath.Join(r.lib, "coverage-trace.bash"))
 	}
