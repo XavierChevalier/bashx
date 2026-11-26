@@ -10,8 +10,8 @@ type summary struct{ passed, failed, skipped, total, files int }
 
 type caseRow struct{ file, status, ms, name, output string }
 
-// parseCases reads cases.tsv as the reporters' `read -r file status ms name
-// output` does (fields unescaped later).
+// parseCases reads cases.tsv: file, status, ms, name, output per line
+// (fields escaped; unescaped where they are written out).
 func parseCases(data string) []caseRow {
 	var rows []caseRow
 	for _, line := range strings.Split(data, "\n") {

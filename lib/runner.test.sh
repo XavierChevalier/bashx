@@ -2,10 +2,7 @@
 # Tests of the runner (bashx test).
 source "$(dirname "${BASH_SOURCE[0]}")/bashx.sh"
 
-LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# BASHX_TEST_RUNNER: another runner to check against these tests (a bash
-# script taking the same arguments), e.g. go/runner-shim.bash.
-RUNNER="${BASHX_TEST_RUNNER:-${LIB_DIR}/runner.sh}"
+BASHX="$(cd "$(dirname "${BASH_SOURCE[0]}")/../bin" && pwd)/bashx"
 
 # Writes an executable test file <path> running <body>.
 write_stub() {
@@ -28,7 +25,7 @@ write_bashx_file() {
 run_runner() {
   local -r root="$1"
   shift
-  BASHX_PLAIN_OUTPUT=1 bash "${RUNNER}" --jobs=2 "$@" "${root}"
+  BASHX_PLAIN_OUTPUT=1 "${BASHX}" test --jobs=2 "$@" "${root}"
 }
 
 test_should_run_every_test_file_under_the_root() {
@@ -201,7 +198,7 @@ test_should_emit_no_cursor_escapes_outside_a_tty() {
   local tmp out
   tmp="$(test::tmp_dir)"
   write_stub "${tmp}/ok.test.sh" 'exit 0'
-  out="$(bash "${RUNNER}" "${tmp}" 2>&1)"
+  out="$("${BASHX}" test "${tmp}" 2>&1)"
   assert "${out}" !contains $'\033[?25l'
   assert "${out}" !contains $'\033[1A'
 }
@@ -225,7 +222,7 @@ test_should_refuse_bad_options() {
     assert "${rc}" == 2
   done
   rc=0
-  bash "${RUNNER}" "${tmp}/missing" >/dev/null 2>&1 || rc=$?
+  "${BASHX}" test "${tmp}/missing" >/dev/null 2>&1 || rc=$?
   assert "${rc}" == 2  # a missing root
 }
 
@@ -249,7 +246,7 @@ test_should_start_the_longest_file_first() {
   write_stub "${tmp}/a.test.sh" 'echo ran-a'
   write_stub "${tmp}/z.test.sh" 'echo ran-z'
   printf '5\tz.test.sh\n1\ta.test.sh\n' >"${tmp}/durations.tsv"
-  out="$(BASHX_PLAIN_OUTPUT=1 bash "${RUNNER}" --jobs=1 --durations="${tmp}/durations.tsv" "${tmp}" 2>&1)"
+  out="$(BASHX_PLAIN_OUTPUT=1 "${BASHX}" test --jobs=1 --durations="${tmp}/durations.tsv" "${tmp}" 2>&1)"
   assert "$(grep -o 'ran-[az]' <<<"${out}" | paste -sd' ')" == "ran-z ran-a"
 }
 
@@ -348,7 +345,7 @@ test::main'
 }
 
 test_should_print_its_help() {
-  assert "$(bash "${RUNNER}" --help)" contains "Usage: bashx test [options] [<root>]"
+  assert "$("${BASHX}" test --help)" contains "Usage: bashx test [options] [<root>]"
 }
 
 test::main

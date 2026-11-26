@@ -49,8 +49,7 @@ func escapeField(s string) string {
 	return strings.NewReplacer("\\", "\\\\", "\t", "\\t", "\n", "\\n", "\r", "\\r").Replace(s)
 }
 
-// unescapeField reads back escapeField, as `$(printf '%b' …)` does (trailing
-// newlines dropped).
+// unescapeField reads back escapeField, trailing newlines dropped.
 func unescapeField(s string) string {
 	if strings.IndexByte(s, '\\') >= 0 {
 		var b strings.Builder
@@ -294,7 +293,7 @@ func (r *runner) runOne(id int, file string) fileResult {
 	r.mu.Lock()
 	r.pgids[id] = pgid
 	r.mu.Unlock()
-	// The deadline: SIGALRM to the file's bash, as perl's alarm does.
+	// The deadline: SIGALRM to the file's bash (status 142, read as a timeout).
 	timer := time.AfterFunc(time.Duration(r.timeout)*time.Second, func() { cmd.Process.Signal(syscall.SIGALRM) })
 	err = cmd.Wait()
 	timer.Stop()

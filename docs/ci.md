@@ -4,7 +4,10 @@
 
 ## GitHub Actions
 
-bashx needs nothing but a checkout. Vendored as a submodule:
+bashx needs nothing but a checkout: GitHub's runners have Go, so `bin/bashx`
+builds its binary on the first call (a few seconds). Elsewhere it downloads
+the release binary; cache `~/.cache/bashx` to download it once. Vendored as a
+submodule:
 
 ```yaml
 name: Tests

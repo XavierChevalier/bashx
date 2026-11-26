@@ -6,10 +6,24 @@
 
 | Needed for | Requirement |
 | --- | --- |
-| everything | **bash ≥ 5.0**, `find`, `awk`, `sort`, `mktemp` |
-| `bashx test` deadlines and process cleanup | `perl` (optional: without it, files run without a deadline) |
+| test files | **bash ≥ 5.0** and the usual coreutils (`mktemp`, `sed`, `diff`…) |
+| the `bashx` command | its binary for your platform (Linux or macOS, amd64 or arm64), which `bin/bashx` finds by itself: see below |
 | `bashx test --coverage`, `bashx coverage` | `git` (optional: outside git every `*.sh` counts) |
-| `bashx mutate` | `git`, and GNU `timeout`, `shuf`, `realpath` (coreutils) |
+| `bashx mutate` | `git` |
+
+### The binary
+
+`bashx test`, `coverage` and `mutate` are one Go program. `bin/bashx` runs
+it from the first place it finds:
+
+| Source | When |
+| --- | --- |
+| built from the sources into `.build/` | a git checkout (methods A, B, D) on a machine with [Go](https://go.dev/dl/) ≥ 1.22: a few seconds, once, and again after an update |
+| `libexec/` | the release archive (method C) ships every binary |
+| downloaded into `~/.cache/bashx/<version>/` | otherwise: once per version, with `curl` or `wget`, checked against its `.sha256` |
+
+A machine without network access needs Go, or the release archive. To use a
+binary of your own, set `BASHX_BIN` to its path.
 
 Check your bash:
 
@@ -19,8 +33,8 @@ GNU bash, version 5.2.37(1)-release (x86_64-pc-linux-gnu)
 ```
 
 **Linux**: any distribution with bash 5 and GNU coreutils (Debian ≥ 10,
-Ubuntu ≥ 20.04, Fedora…). CI runs on Ubuntu. On Alpine, install `bash`,
-`coreutils` and `perl` first.
+Ubuntu ≥ 20.04, Fedora…). CI runs on Ubuntu. On Alpine, install `bash`
+and `coreutils` first.
 
 **macOS** ships bash 3.2, which is too old. Install a recent bash and GNU
 coreutils with Homebrew:
@@ -30,8 +44,7 @@ brew install bash coreutils
 export PATH="$(brew --prefix coreutils)/libexec/gnubin:$(brew --prefix)/bin:${PATH}"
 ```
 
-bashx is tested on Linux; macOS with these packages is expected to work but
-is not part of CI.
+CI runs the suite on Linux and on macOS with these packages.
 
 ## Choose how to install
 
@@ -75,8 +88,9 @@ submodules (see [CI](ci.md)).
 ### C. Copy into the project
 
 Every [release](https://github.com/XavierChevalier/bashx/releases) has a
-`bashx-X.Y.Z.tar.gz` with what bashx needs at run time (`bin/`, `lib/`) and
-its `LICENSE`, plus a `.sha256` to check it:
+`bashx-X.Y.Z.tar.gz` with what bashx needs at run time (`bin/`, `lib/`, and
+`libexec/` with the binary for every platform) and its `LICENSE`, plus a
+`.sha256` to check it:
 
 <!-- x-release-please-start-version -->
 ```bash
@@ -150,7 +164,7 @@ Read the [CHANGELOG](../CHANGELOG.md) before updating.
 
 ```bash
 rm ~/.local/bin/bashx
-rm -rf ~/.bashx
+rm -rf ~/.bashx ~/.cache/bashx
 ```
 
 For a submodule: `git rm vendor/bashx`, then remove its section from

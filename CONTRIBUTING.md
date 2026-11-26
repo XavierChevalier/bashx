@@ -4,23 +4,32 @@
 
 ```bash
 shellcheck -x -S warning bin/bashx $(git ls-files '*.sh' '*.bash')
-bin/bashx test
-bin/bashx mutate lib/<the script you changed>.sh   # optional, slower
+gofmt -l cmd && go vet ./... && go test ./...
+bin/bashx test                                      # builds .build/bashx first
+bin/bashx mutate lib/bashx.sh                       # optional, slower
 ```
+
+The commands are Go (`cmd/bashx`, Go ≥ 1.22, no dependency); the test API
+(`lib/bashx.sh`) is bash. `bin/bashx` rebuilds `.build/bashx` whenever a file
+of `cmd/` changes, so `bin/bashx test` always runs the code you edit. The bash
+suite (`*.test.sh`) drives the binary as a user would; `cmd/bashx/*_test.go`
+holds the unit tests of its parts.
 
 CI runs the same checks, and more:
 
 | Job | Checks |
 | --- | --- |
 | `shellcheck` | every script, warnings and above |
-| `test (ubuntu, coverage)` | the whole suite, with the coverage table in the job summary |
+| `go` | `gofmt`, `go vet`, the Go unit tests |
+| `test (ubuntu, coverage)` | the whole suite, with the bash and Go coverage in the job summary |
 | `test (bash 5.0/5.1/5.2)` | the suite on each supported bash, on the official `bash` images |
 | `test (macos)` | the suite on macOS with Homebrew bash and coreutils |
 | `mutation (example)` | `bashx mutate` on the example, report in the job summary |
 | `PR title` | the title follows Conventional Commits (below) |
 
-Every change to `lib/` comes with its tests, next to the file
-(`lib/x.sh` → `lib/x.test.sh`).
+Every change comes with its tests: next to the file for `lib/`
+(`lib/x.sh` → `lib/x.test.sh`), in `lib/*.test.sh` (through `bin/bashx`) or
+`cmd/bashx/*_test.go` for the commands.
 
 ## Commit messages and pull request titles
 
@@ -60,8 +69,11 @@ Nothing to do by hand but merging:
 2. Merging that pull request:
    - tags `vX.Y.Z`;
    - publishes the GitHub release, with the changelog section as its notes;
-   - attaches `bashx-X.Y.Z.tar.gz` (`bin/`, `lib/`, `LICENSE`, `README.md`,
-     `CHANGELOG.md`) and its `.sha256`.
+   - builds the binary for Linux and macOS, amd64 and arm64, and attaches
+     each one (`bashx-<os>-<arch>`, which `bin/bashx` downloads) with its
+     `.sha256`;
+   - attaches `bashx-X.Y.Z.tar.gz` (`bin/`, `lib/`, `libexec/` with every
+     binary, `LICENSE`, `README.md`, `CHANGELOG.md`) and its `.sha256`.
 
 To force a version, add a commit with a `Release-As: 1.0.0` footer:
 

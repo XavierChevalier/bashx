@@ -9,8 +9,6 @@ import (
 	"syscall"
 	"time"
 	"unicode/utf8"
-
-	"golang.org/x/term"
 )
 
 // status is the ephemeral footer on stderr (as in Jest/Vitest): erased before
@@ -35,8 +33,8 @@ func newStatus(r *runner) *status {
 }
 
 func (s *status) start() {
-	term := os.Getenv("TERM")
-	if !isTerminal(2) || term == "" || term == "dumb" || os.Getenv("CI") != "" || os.Getenv("BASHX_PLAIN_OUTPUT") != "" {
+	termName := os.Getenv("TERM")
+	if !isTerminal(2) || termName == "" || termName == "dumb" || os.Getenv("CI") != "" || os.Getenv("BASHX_PLAIN_OUTPUT") != "" {
 		return
 	}
 	s.active = true
@@ -94,7 +92,7 @@ func (s *status) render() {
 		return
 	}
 	cols, rows := 80, 24
-	if w, h, err := term.GetSize(2); err == nil {
+	if w, h, ok := terminalSize(2); ok {
 		if w >= 20 {
 			cols = w
 		}
@@ -144,8 +142,6 @@ func (s *status) render() {
 	fmt.Fprint(os.Stderr, b.String())
 	s.height = len(lines)
 }
-
-func isTerminal(fd int) bool { return term.IsTerminal(fd) }
 
 // trapSignals: on INT or TERM, kill every test file's group, clean up, exit 130.
 func trapSignals(r *runner) {

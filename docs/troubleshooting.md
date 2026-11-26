@@ -19,6 +19,24 @@ when `BASHX_LIB` is not set. Either install it on the `PATH`, or run
 `BASHX_LIB=vendor/bashx/lib bash my.test.sh`, or run it through
 `bashx test path/to/dir`.
 
+**`bashx: no bashx X.Y.Z binary for <os>-<arch>`**
+`bin/bashx` found no Go to build its binary and could not download it: no
+network (or no `curl`/`wget`), or a platform without a release binary.
+Install [Go](https://go.dev/dl/) and run it again, use the release archive
+(its `libexec/` holds every binary), or point `BASHX_BIN` at a binary you
+built (`go build -o bashx ./cmd/bashx` in a checkout). See
+[the binary](installation.md#the-binary).
+
+**`bashx: checksum mismatch for …`**
+The download is corrupted or not the published binary: nothing was installed.
+Run the command again; if it persists, check what sits between you and
+github.com (a proxy rewriting downloads).
+
+**`bashx: could not build …/cmd/bashx`**
+`go build` failed above this line. Go must be 1.22 or later
+(`go version`); to use a downloaded binary instead, take Go off the `PATH`
+for bashx or set `BASHX_BIN`.
+
 ## bashx test
 
 **`No test files (*.test.sh) under …`**

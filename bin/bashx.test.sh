@@ -62,4 +62,49 @@ test_should_hand_mutate_and_coverage_their_arguments() {
   assert "$("${BASHX}" coverage report -h)" contains "Usage: bashx coverage report"
 }
 
+# A copy of bin/ and lib/ without the sources (the release archive, a copy
+# into a project) and without Go: the binary comes from libexec/ when the
+# archive ships it, else from the release, once, checked against its sum.
+test_should_find_or_download_the_binary_without_go() {
+  local dir bin releases path out
+  command -v curl >/dev/null && command -v sha256sum >/dev/null || test::skip "needs curl and sha256sum"
+  dir="$(test::tmp_dir)"
+  mkdir -p "${dir}/bashx"
+  cp -R "${LIB}" "${dir}/bashx/lib"
+  mkdir -p "${dir}/bashx/bin"
+  cp "${BASHX}" "${dir}/bashx/bin/bashx"
+  bin="${BASHX_BIN:-${LIB}/../.build/bashx}"
+  # PATH without go: a dir of links to the commands the launcher uses.
+  path="$(test::tmp_dir)"
+  local cmd
+  for cmd in bash env uname tr cat mkdir mktemp mv rm chmod awk sha256sum curl dirname readlink; do
+    ln -s "$(command -v "${cmd}")" "${path}/${cmd}"
+  done
+
+  releases="$(test::tmp_dir)"
+  mkdir -p "${releases}/v$("${BASHX}" version | cut -d' ' -f2)"
+  local -r asset="${releases}/v$("${BASHX}" version | cut -d' ' -f2)/bashx-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/')"
+  cp "${bin}" "${asset}"
+  (cd "$(dirname "${asset}")" && sha256sum "$(basename "${asset}")" >"${asset}.sha256")
+
+  out="$(BASHX_BIN="" PATH="${path}" XDG_CACHE_HOME="${dir}/cache" BASHX_RELEASES_URL="file://${releases}" \
+    "${dir}/bashx/bin/bashx" test --help 2>&1)"
+  assert "${out}" contains "bashx: downloading file://"
+  assert "${out}" contains "Usage: bashx test"
+  out="$(BASHX_BIN="" PATH="${path}" XDG_CACHE_HOME="${dir}/cache" "${dir}/bashx/bin/bashx" test --help 2>&1)"
+  assert "${out}" !contains "downloading"  # cached
+
+  echo "corrupted" >"${asset}"
+  local rc=0
+  out="$(BASHX_BIN="" PATH="${path}" XDG_CACHE_HOME="${dir}/cache2" BASHX_RELEASES_URL="file://${releases}" \
+    "${dir}/bashx/bin/bashx" test --help 2>&1)" || rc=$?
+  assert "${rc}" == 1
+  assert "${out}" contains "checksum mismatch"
+
+  mkdir -p "${dir}/bashx/libexec"
+  cp "${bin}" "${dir}/bashx/libexec/$(basename "${asset}")"
+  out="$(BASHX_BIN="" PATH="${path}" XDG_CACHE_HOME="${dir}/cache3" "${dir}/bashx/bin/bashx" test --help 2>&1)"
+  assert "${out}" == "$(BASHX_BIN="${bin}" "${BASHX}" test --help)"
+}
+
 test::main

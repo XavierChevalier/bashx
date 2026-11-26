@@ -14,8 +14,8 @@ ran. Score it again, per script or for a PR comment:
 ```console
 $ bashx coverage report -f tsv coverage/covered.tsv
 path	covered	coverable
-lib/runner.sh	214	270
-lib/bashx.sh	121	121
+lib/deploy.sh	214	270
+lib/config.sh	121	121
 
 $ bashx coverage report -f markdown coverage/covered.tsv
 **Coverage:** 90.7% of bash lines (680/750)
@@ -25,9 +25,9 @@ $ bashx coverage report -f markdown coverage/covered.tsv
 
 ```console
 $ bashx coverage report -f uncovered coverage/covered.tsv
-lib/coverage.sh:103: echo "no trace dir ${traces}" >&2
-lib/coverage.sh:104: return 1
-lib/coverage.sh:178: usage
+lib/deploy.sh:103: echo "no target ${target}" >&2
+lib/deploy.sh:104: return 1
+lib/deploy.sh:178: usage
 ...
 ```
 

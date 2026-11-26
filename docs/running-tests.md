@@ -58,8 +58,7 @@ Every option, with its exact syntax and exit codes, is in the
 
 ## Isolation
 
-Each file runs in its own process group with a deadline (when `perl` is
-available). When the file ends, every process it left behind is killed: a
+Each file runs in its own process group with a deadline. When the file ends, every process it left behind is killed: a
 `sleep 300 &` forgotten in a test cannot outlive the suite or hold its output
 open.
 

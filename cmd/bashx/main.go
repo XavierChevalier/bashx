@@ -1,20 +1,21 @@
-// bashx-go: a Go port of the bashx runner (`bashx test`), its reporters and
-// `bashx coverage`, built to compare it with the bash version. Test files and
-// their API (lib/bashx.sh) are unchanged: the runner still starts `bash <file>`
-// and speaks the same protocol (BASHX_RESULT_FILE, BASHX_CASES_FILE).
+// bashx: the command behind bin/bashx. It runs test files (`bashx test`),
+// scores coverage (`bashx coverage`) and runs mutation testing (`bashx
+// mutate`). Test files stay bash: they source lib/bashx.sh, and the runner
+// starts `bash <file>` and reads back what the API writes
+// (BASHX_RESULT_FILE, BASHX_CASES_FILE). See docs/how-it-works.md.
 package main
 
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"syscall"
 )
 
-const version = "0.1.1-go"
+// version is set at build time: -ldflags "-X main.version=X.Y.Z".
+var version = "dev"
 
-// libDir is the bashx lib dir: $BASHX_LIB, or ../lib next to the executable.
+// libDir is the bashx lib dir: $BASHX_LIB (bin/bashx sets it), or a lib dir
+// next to the executable.
 func libDir() string {
 	if d := os.Getenv("BASHX_LIB"); d != "" {
 		if abs, err := filepath.Abs(d); err == nil {
@@ -67,17 +68,7 @@ func main() {
 	case "coverage":
 		os.Exit(coverageMain(lib, args))
 	case "mutate":
-		// Mutation testing stays in bash: its time is spent in the tests.
-		bash, err := exec.LookPath("bash")
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "bashx: bash not found")
-			os.Exit(127)
-		}
-		argv := append([]string{"bash", filepath.Join(lib, "mutation.sh")}, args...)
-		if err := syscall.Exec(bash, argv, os.Environ()); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(126)
-		}
+		os.Exit(mutationMain(lib, args))
 	case "lib":
 		fmt.Println(lib)
 	case "version", "--version", "-v":

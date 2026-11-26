@@ -2,6 +2,13 @@
 
 # Study: the tooling in Go (or Rust)?
 
+> **Decision:** bashx moved to Go after this study, `bashx mutate` included.
+> The test API (`lib/bashx.sh`) stays bash. Distribution, the main cost below,
+> is handled by `bin/bashx`: it builds the binary when Go is there, else takes
+> it from the release archive or downloads it from the release. See
+> [How it works](how-it-works.md#finding-the-binary). The rest of this page is
+> the study as written, against the bash implementation of commit `87bf118`.
+
 The question: would bashx run faster with its tooling (`bashx test`, the
 reporters, `bashx coverage`) written in a compiled language, the test API
 staying as it is? To answer it with numbers, [`go/`](../go) holds a Go port
@@ -132,9 +139,20 @@ measured equivalence (the same tests, the same reports) makes that option
 cheap to take up later. Until then, `go/` stays a study: built and tested in
 CI, not distributed.
 
+## After the move
+
+`bashx mutate`, ported too, gives the same report on the example
+(`examples/calculator/calc.sh`, 22 mutants, 4 jobs) in 1.3 to 1.6 s instead
+of 2.4 s. bashx's own suite went from 14 s to 4.5 s: most of that is
+`lib/mutation.test.sh`, whose cases run whole mutation sessions.
+
 ## Run it again
 
+The benchmark compares the two implementations, so it runs from the study's
+commit, where both exist:
+
 ```bash
+git checkout 87bf118
 go -C go build -o bashx-go .
 bench/run.bash 5            # BENCH_JOBS=8 to change the parallelism
 ```
