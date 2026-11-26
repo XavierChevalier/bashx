@@ -25,7 +25,7 @@ Or cloned at a fixed tag:
 
 <!-- x-release-please-start-version -->
 ```yaml
-      - run: git clone --depth 1 --branch v0.1.1 https://github.com/XavierChevalier/bashx.git /tmp/bashx
+      - run: git clone --depth 1 --branch v0.2.0 https://github.com/XavierChevalier/bashx.git /tmp/bashx
       - run: /tmp/bashx/bin/bashx test
 ```
 <!-- x-release-please-end -->
