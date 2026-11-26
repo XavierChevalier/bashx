@@ -942,7 +942,8 @@ func runScript(lib string, sandboxes []string, script string, ops []operator, o 
 			return nil, fmt.Errorf("error: %s fails before any mutation (exit %d): fix it first", t, rc)
 		}
 	}
-	baselineMs := time.Since(started).Milliseconds()
+	// Rounded up: tests faster than 1 ms still read as having run.
+	baselineMs := (time.Since(started) + time.Millisecond - 1).Milliseconds()
 	deadline := time.Duration(mutationDeadline(baselineMs)) * time.Second
 	if o.deadline != "" {
 		secs, _ := strconv.ParseFloat(o.deadline, 64)
