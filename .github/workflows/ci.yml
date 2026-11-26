@@ -70,6 +70,20 @@ jobs:
           bash --version | head -1
           bin/bashx test
 
+  # The Go port of the runner (go/, a study): it must pass the runner's own
+  # tests, which run it as a black box.
+  go-runner:
+    name: test (Go runner)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@v5 # TODO: pin to a commit SHA like the other actions
+        with:
+          go-version-file: go/go.mod
+      - run: go -C go vet ./... && go -C go build -o bashx-go .
+      - run: BASHX_TEST_RUNNER="${PWD}/go/runner-shim.bash" bash lib/runner.test.sh
+      - run: go/bashx-go test
+
   mutation:
     name: mutation (example)
     runs-on: ubuntu-latest

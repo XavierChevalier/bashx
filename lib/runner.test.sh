@@ -3,7 +3,9 @@
 source "$(dirname "${BASH_SOURCE[0]}")/bashx.sh"
 
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RUNNER="${LIB_DIR}/runner.sh"
+# BASHX_TEST_RUNNER: another runner to check against these tests (a bash
+# script taking the same arguments), e.g. go/runner-shim.bash.
+RUNNER="${BASHX_TEST_RUNNER:-${LIB_DIR}/runner.sh}"
 
 # Writes an executable test file <path> running <body>.
 write_stub() {
